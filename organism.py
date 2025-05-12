@@ -1,11 +1,16 @@
 import mesa
+import numpy as np
 
 class Organism(mesa.Agent):
-    def __init__(self, model, strategy = "cooperator", energy = 5):
+    def __init__(self, model, energy = 5, dna = None):
         super().__init__(model)
-        self.strategy = strategy
         self.energy = energy
-    
+        dna_values = np.random.dirichlet([1, 1, 1])
+        self.dna = dna or {
+            "cooperation": dna_values[0],
+            "consumption": dna_values[1],
+            "metabolism": dna_values[2],
+        }
     def step(self):
         dead = self.move()
         if dead >= 0:
@@ -39,13 +44,22 @@ class Organism(mesa.Agent):
         self.model.environment[x][y] -= consumed_amount
         print(f"Agent with id {self.unique_id} consumed at location [{x}, {y}]")
 
+    def mutate_dna(self):
+        new_dna = {
+            k: max(0.001, v + self.random.gauss(0, 0.02)) for k, v in self.dna.items()
+        }
+        total = sum(new_dna.values())
+        return {k: v / total for k, v in new_dna.items()}
+
+
     def reproduce(self):
         if self.energy >= 10.0:
             self.energy /= 2
             if self.random.random() < self.model.mutation_rate:
-                new_strategy = "freeloader" if self.strategy == "cooperator" else "cooperator"
+                child_dna = self.mutate_dna()
             else:
-                new_strategy = self.strategy
-            child = Organism(self.model, strategy=new_strategy, energy=self.energy)
+                child_dna = dict(self.dna)
+
+            child = Organism(self.model, energy=self.energy, dna=child_dna)
             self.model.space.place_agent(child, self.pos)
             self.model.agents.add(child)

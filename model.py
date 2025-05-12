@@ -15,19 +15,19 @@ class NicheModel(mesa.Model):
 
         self.environment = np.full((width, height), 2.0)  # Initial resources
         for _ in range(self.n_agents):
-            strategy = self.random.choice(["cooperator", "freeloader"])
             x = self.random.randrange(width)
             y = self.random.randrange(height)
-            agent = Organism(self, strategy=strategy)
+            agent = Organism(self)
             self.space.place_agent(agent, (x, y))
             self.agents.add(agent)
         
         self.datacollector = mesa.DataCollector(
             model_reporters={
-                "Cooperators": lambda m: sum(1 for a in m.agents if a.strategy == "cooperator"),
-                "Freeloaders": lambda m: sum(1 for a in m.agents if a.strategy == "freeloader"),
                 "MeanEnergy": lambda m: np.mean([a.energy for a in m.agents]) if m.agents else 0,
                 "MeanResource": lambda m: np.mean(m.environment) if m.environment.size > 0 else 0,
+                "AvgCooperation": lambda m: np.mean([a.dna["cooperation"] for a in m.agents]) if m.agents else 0,
+                "AvgMetabolism": lambda m: np.mean([a.dna["metabolism"] for a in m.agents]) if m.agents else 0,
+                "AvgConsumption": lambda m: np.mean([a.dna["consumption"] for a in m.agents]) if m.agents else 0
             }
         )
 
