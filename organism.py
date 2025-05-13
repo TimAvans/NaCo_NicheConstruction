@@ -11,22 +11,28 @@ class Organism(mesa.Agent):
             "consumption": dna_values[1],
             "metabolism": dna_values[2],
         }
+
     def step(self):
-        dead = self.move()
-        if dead >= 0:
-            self.consume()
-            self.reproduce()
+        self.energy -= self.dna["metabolism"]
+        if self.energy <= 0:
+            self.die()
+            return
+
+        self.move()
+        self.consume()
+        self.reproduce()
+
 
     def move(self):
-        self.energy -= 0.5
-        if  self.energy <= 0:
-            self.die()
-            return -1
-        
         possibilities = self.model.space.get_neighborhood(self.pos, moore=True, include_center=False)
-        new_position = self.random.choice(possibilities)
-        self.model.space.move_agent(self, new_position)
-        return 0
+        possibilities = list(possibilities)
+        self.random.shuffle(possibilities)
+
+        for new_pos in possibilities:
+            contents = self.model.space.get_cell_list_contents(new_pos)
+            if not any(isinstance(a, Organism) for a in contents):
+                self.model.space.move_agent(self, new_pos)
+                return 
     
     def die(self):
         self.model.space.remove_agent(self)
@@ -61,5 +67,11 @@ class Organism(mesa.Agent):
                 child_dna = dict(self.dna)
 
             child = Organism(self.model, energy=self.energy, dna=child_dna)
-            self.model.space.place_agent(child, self.pos)
-            self.model.agents.add(child)
+            neighbors = self.model.space.get_neighborhood(self.pos, moore=True, include_center=False)
+            neighbors = list(neighbors)
+            self.random.shuffle(neighbors)
+            for pos in neighbors:
+                if not any(isinstance(a, Organism) for a in self.model.space.get_cell_list_contents(pos)):
+                    self.model.space.place_agent(child, pos)
+                    self.model.agents.add(child)
+                    return
