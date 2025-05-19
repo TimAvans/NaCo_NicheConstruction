@@ -5,23 +5,24 @@ class Organism(mesa.Agent):
     def __init__(self, model, energy = 5, dna = None):
         super().__init__(model)
         self.energy = energy
-        dna_values = np.random.dirichlet([1, 1, 1])
+        dna_values = np.random.dirichlet([1, 1, 1, 1])  # Now 4 traits
         self.dna = dna or {
             "cooperation": dna_values[0],
             "consumption": dna_values[1],
             "metabolism": dna_values[2],
-        }
+            "planting": dna_values[3],  # NEW
+        } 
 
     def step(self):
-        self.energy -= self.dna["metabolism"]
+        self.energy -= self.dna["metabolism"] # use metabolism trait
         if self.energy <= 0:
             self.die()
             return
 
         self.move()
         self.consume()
+        self.modify_environment()
         self.reproduce()
-
 
     def move(self):
         possibilities = self.model.space.get_neighborhood(self.pos, moore=True, include_center=False)
@@ -33,22 +34,31 @@ class Organism(mesa.Agent):
             if not any(isinstance(a, Organism) for a in contents):
                 self.model.space.move_agent(self, new_pos)
                 return 
-    
+            
     def die(self):
         self.model.space.remove_agent(self)
         self.model.agents.remove(self)
         print(f"Agent with id {self.unique_id} died due to energy level")
 
+
     def modify_environment(self):
-        return -1
+        """Plant food based on planting trait."""
+        x, y = self.pos
+        plant_amount = self.dna["planting"] * 0.5  # Max planting = 0.5
+        self.model.environment[x][y] += plant_amount
+        if self.model.environment[x][y] > self.model.max_resource:
+            self.model.environment[x][y] = self.model.max_resource
+        print(f"Agent {self.unique_id} planted {plant_amount:.2f} at ({x},{y})")
+
 
     def consume(self):
         x, y = self.pos
         current_amount = self.model.environment[x][y]
-        consumed_amount = min(current_amount, 1.0)
+        consumed_amount = min(current_amount, self.dna["consumption"])  # use trait (changed from 1.0)
         self.energy += consumed_amount
         self.model.environment[x][y] -= consumed_amount
-        print(f"Agent with id {self.unique_id} consumed at location [{x}, {y}]")
+        print(f"Agent with id {self.unique_id} consumed {consumed_amount:.2f} at location [{x}, {y}]")
+
 
     def mutate_dna(self):
         new_dna = {
@@ -56,7 +66,6 @@ class Organism(mesa.Agent):
         }
         total = sum(new_dna.values())
         return {k: v / total for k, v in new_dna.items()}
-
 
     def reproduce(self):
         if self.energy >= 10.0:
@@ -75,3 +84,5 @@ class Organism(mesa.Agent):
                     self.model.space.place_agent(child, pos)
                     self.model.agents.add(child)
                     return
+
+    
