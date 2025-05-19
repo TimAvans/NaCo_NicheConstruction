@@ -3,9 +3,7 @@ from organism import Organism
 import numpy as np
 from tile import Tile
 
-'''
 
-'''
 class NicheModel(mesa.Model):    
     def __init__(self, n_agents = 5, width = 25, height = 25, max_resource = 5.0, mutation_rate= 0.01):
         super().__init__()
@@ -27,7 +25,9 @@ class NicheModel(mesa.Model):
                 "AvgCooperation": lambda m: np.mean([a.dna["cooperation"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
                 "AvgMetabolism": lambda m: np.mean([a.dna["metabolism"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
                 "AvgConsumption": lambda m: np.mean([a.dna["consumption"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
+                "AvgPlanting": lambda m: np.mean([a.dna["planting"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
                 "OrganismCount": lambda m: sum(isinstance(a, Organism) for a in m.agents),
+                "GeneticDiversity": lambda m: np.std([[a.dna["cooperation"], a.dna["consumption"], a.dna["metabolism"], a.dna["planting"]] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0
             }
         )
 
@@ -37,7 +37,7 @@ class NicheModel(mesa.Model):
             y = self.random.randrange(self.height)
             agent = Organism(self)
             self.space.place_agent(agent, (x, y))
-            self.agents.add(agent)
+            self.agents.add(agent)      
 
     def init_tiles(self):
         for x in range(self.width):
