@@ -1,4 +1,4 @@
-# Niche construction Simulation
+# Niche Construction Simulation
 Repository for the course Natural Computing at Radboud University, Spring 2025. 
 
 
