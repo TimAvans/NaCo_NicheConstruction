@@ -26,6 +26,7 @@ class NicheModel(mesa.Model):
                 "AvgMetabolism": lambda m: np.mean([a.dna["metabolism"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
                 "AvgConsumption": lambda m: np.mean([a.dna["consumption"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
                 "AvgPlanting": lambda m: np.mean([a.dna["planting"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
+                "AvgFitness": lambda m: np.mean([a.fitness() for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
                 "OrganismCount": lambda m: sum(isinstance(a, Organism) for a in m.agents),
                 "GeneticDiversity": lambda m: np.std([[a.dna["cooperation"], a.dna["consumption"], a.dna["metabolism"], a.dna["planting"]] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0
             }

@@ -50,12 +50,13 @@ plot_dna_1 = make_plot_component("AvgCooperation", backend="matplotlib")
 plot_dna_2 = make_plot_component("AvgConsumption", backend="matplotlib")
 plot_dna_3 = make_plot_component("AvgMetabolism", backend="matplotlib")
 plot_dna_4 = make_plot_component("AvgPlanting", backend="matplotlib")  # NEW plot
+plot_fitness = make_plot_component("AvgFitness", backend="matplotlib")
 plot_population = make_plot_component("OrganismCount", backend="matplotlib")
 
 # Interactive web app
 page = SolaraViz(
     niche_model,
-    components=[space_component, resource_plot, energy_plot, plot_dna_1, plot_dna_2, plot_dna_3, plot_dna_4, plot_population],
+    components=[space_component, resource_plot, energy_plot, plot_dna_1, plot_dna_2, plot_dna_3, plot_dna_4, plot_fitness, plot_population],
     model_params=model_params,
     name="Niche Construction Model: First Experiment, Local Environmental Modification"
 )

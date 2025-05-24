@@ -5,6 +5,7 @@ class Organism(mesa.Agent):
     def __init__(self, model, energy = 5, dna = None):
         super().__init__(model)
         self.energy = energy
+        self.offspring_count = 0
         dna_values = np.random.dirichlet([1, 1, 1, 1])  # Now 4 traits
         self.dna = dna or {
             "cooperation": dna_values[0],
@@ -83,6 +84,10 @@ class Organism(mesa.Agent):
                 if not any(isinstance(a, Organism) for a in self.model.space.get_cell_list_contents(pos)):
                     self.model.space.place_agent(child, pos)
                     self.model.agents.add(child)
+                    self.offspring_count += 1  # for fitness function
                     return
 
-    
+    def fitness(self):
+        fitness = self.energy + (self.offspring_count * 5) - (self.dna["metabolism"] * 2)
+        return  fitness
+
