@@ -15,6 +15,7 @@ class NicheModel(mesa.Model):
         self.mutation_rate = mutation_rate
         self.max_resource = max_resource
         self.environment = np.full((width, height), 2.0)  
+        self.dead_ages = []
         self.init_tiles()
         self.init_organisms()
         
@@ -28,6 +29,7 @@ class NicheModel(mesa.Model):
                 "AvgPlanting": lambda m: np.mean([a.dna["planting"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
                 "AvgFitness": lambda m: np.mean([a.fitness() for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
                 "OrganismCount": lambda m: sum(isinstance(a, Organism) for a in m.agents),
+                "AvgLifespan": lambda m: np.mean(m.dead_ages) if m.dead_ages else 0,
                 "GeneticDiversity": lambda m: np.std([[a.dna["cooperation"], a.dna["consumption"], a.dna["metabolism"], a.dna["planting"]] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0
             }
         )

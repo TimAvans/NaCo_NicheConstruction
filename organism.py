@@ -7,6 +7,7 @@ class Organism(mesa.Agent):
         self.energy = energy
         self.offspring_count = 0
         self.times_shared = 0
+        self.age = 0
         dna_values = np.random.dirichlet([1, 1, 1, 1])  # Now 4 traits
         self.dna = dna or {
             "cooperation": dna_values[0],
@@ -20,7 +21,7 @@ class Organism(mesa.Agent):
         if self.energy <= 0:
             self.die()
             return
-
+        self.age += 1
         self.move()
         self.consume()
         self.cooperate()
@@ -42,9 +43,10 @@ class Organism(mesa.Agent):
 
     def die(self):
         if self.pos is not None:
+            self.model.dead_ages.append(self.age)
             self.model.space.remove_agent(self)
         self.model.agents.discard(self)  # safer than remove
-        print(f"Agent with id {self.unique_id} died due to energy level")
+        print(f"Agent with id {self.unique_id} died at age {self.age}")
 
 
     def modify_environment(self):
