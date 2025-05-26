@@ -1,16 +1,21 @@
 import mesa
 import numpy as np
-
+from structure import Structure
+'''
+TODO: Need building to reproduce?!
+'''
 class Organism(mesa.Agent):
     def __init__(self, model, energy = 5, dna = None):
         super().__init__(model)
         self.energy = energy
-        dna_values = np.random.dirichlet([1, 1, 1])
+        dna_values = np.random.dirichlet([1, 1, 1, 1])
         self.dna = dna or {
             "cooperation": dna_values[0],
             "consumption": dna_values[1],
             "metabolism": dna_values[2],
+            "builder": dna_values[3],
         }
+        self.built = False
 
     def step(self):
         self.energy -= self.dna["metabolism"]
@@ -20,7 +25,9 @@ class Organism(mesa.Agent):
 
         self.move()
         self.consume()
-        self.reproduce()
+        self.modify_environment()
+        if self.built:
+            self.reproduce()
 
 
     def move(self):
@@ -40,15 +47,32 @@ class Organism(mesa.Agent):
         print(f"Agent with id {self.unique_id} died due to energy level")
 
     def modify_environment(self):
-        return -1
+        if self.built or self.energy <= 6:
+            return
+        
+        chance = self.dna["builder"]
+        if self.random.random() < chance:
+            x, y = self.pos
+            contents = self.model.space.get_cell_list_contents((x, y))
+            if not any(isinstance(a, Structure) for a in contents):
+                self.energy -= 3
+                struct = Structure(self.model, (x,y), lifespan=20)
+                self.model.space.place_agent(struct, (x, y))
+                self.model.agents.add(struct)
+                self.built = True
+                print(f"Agent with id {self.unique_id} build a structure at [{x}, {y}]")
 
     def consume(self):
         x, y = self.pos
         current_amount = self.model.environment[x][y]
-        consumed_amount = min(current_amount, 1.0)
+        consumption_capacity = self.dna["consumption"] * self.model.max_resource
+        consumed_amount = min(current_amount, consumption_capacity)
         self.energy += consumed_amount
         self.model.environment[x][y] -= consumed_amount
         print(f"Agent with id {self.unique_id} consumed at location [{x}, {y}]")
+
+        repair = self.dna["cooperation"] * self.model.cooperation_factor
+        self.model.environment[x][y] = min(self.model.environment[x][y] + repair, self.model.max_resource)
 
     def mutate_dna(self):
         new_dna = {

@@ -2,12 +2,13 @@ import mesa
 from organism import Organism
 import numpy as np
 from tile import Tile
+from structure import Structure
 
 '''
 
 '''
 class NicheModel(mesa.Model):    
-    def __init__(self, n_agents = 5, width = 25, height = 25, max_resource = 5.0, mutation_rate= 0.01):
+    def __init__(self, n_agents = 5, width = 25, height = 25, max_resource = 5.0, recharge_rate = 0.25, mutation_rate= 0.01, cooperation_factor=0.05):
         super().__init__()
         self.grid = mesa.space.MultiGrid(width, height, torus=True)
         self.width = width
@@ -16,18 +17,22 @@ class NicheModel(mesa.Model):
         self.space = self.grid
         self.mutation_rate = mutation_rate
         self.max_resource = max_resource
+        self.recharge_rate = recharge_rate
+        self.cooperation_factor = cooperation_factor
         self.environment = np.full((width, height), 2.0)  
         self.init_tiles()
         self.init_organisms()
         
         self.datacollector = mesa.DataCollector(
             model_reporters={
-                "MeanEnergy": lambda m: np.mean([a.energy for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
-                "MeanResource": lambda m: np.mean(m.environment) if m.environment.size > 0 else 0,
-                "AvgCooperation": lambda m: np.mean([a.dna["cooperation"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
-                "AvgMetabolism": lambda m: np.mean([a.dna["metabolism"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
-                "AvgConsumption": lambda m: np.mean([a.dna["consumption"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
-                "OrganismCount": lambda m: sum(isinstance(a, Organism) for a in m.agents),
+            "OrganismCount": lambda m: sum(isinstance(a, Organism) for a in m.agents),
+            "MeanEnergy": lambda m: np.mean([a.energy for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
+            "MeanCooperation": lambda m: np.mean([a.dna["cooperation"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
+            "MeanConsumption": lambda m: np.mean([a.dna["consumption"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
+            "MeanMetabolism": lambda m: np.mean([a.dna["metabolism"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
+            "MeanBuilder": lambda m: np.mean([a.dna["builder"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
+            "MeanResource": lambda m: np.mean(m.environment),
+            "StructureCount": lambda m: sum(isinstance(a, Structure) for a in m.agents),
             }
         )
 
@@ -50,6 +55,11 @@ class NicheModel(mesa.Model):
                 self.agents.add(tile)
 
     def step(self):
+        for x in range(self.space.width):
+            for y in range(self.space.height):
+                if not any(isinstance(a, Structure) for a in self.space.get_cell_list_contents((x, y))):
+                    self.environment[x][y] = min(self.environment[x][y] + self.recharge_rate, self.max_resource)
+
         if len(self.agents) == 0:
             return
         self.agents.shuffle_do("step")
