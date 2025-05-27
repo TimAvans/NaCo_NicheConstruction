@@ -19,7 +19,7 @@ class NicheModel(mesa.Model):
         self.max_resource = max_resource
         self.recharge_rate = recharge_rate
         self.cooperation_factor = cooperation_factor
-        self.environment = np.full((width, height), 2.0)  
+        self.environment = np.full((width, height), max_resource)  
         self.init_tiles()
         self.init_organisms()
         
@@ -55,6 +55,7 @@ class NicheModel(mesa.Model):
                 self.agents.add(tile)
 
     def step(self):
+        #TODO: Remove regen of adjacent tiles to structures
         for x in range(self.space.width):
             for y in range(self.space.height):
                 if not any(isinstance(a, Structure) for a in self.space.get_cell_list_contents((x, y))):
@@ -62,5 +63,6 @@ class NicheModel(mesa.Model):
 
         if len(self.agents) == 0:
             return
+        
         self.agents.shuffle_do("step")
         self.datacollector.collect(self)

@@ -29,7 +29,6 @@ class Organism(mesa.Agent):
         if self.built:
             self.reproduce()
 
-
     def move(self):
         possibilities = self.model.space.get_neighborhood(self.pos, moore=True, include_center=False)
         possibilities = list(possibilities)
@@ -56,7 +55,7 @@ class Organism(mesa.Agent):
             contents = self.model.space.get_cell_list_contents((x, y))
             if not any(isinstance(a, Structure) for a in contents):
                 self.energy -= 3
-                struct = Structure(self.model, (x,y), lifespan=20)
+                struct = Structure(self.model, (x,y))
                 self.model.space.place_agent(struct, (x, y))
                 self.model.agents.add(struct)
                 self.built = True
@@ -80,7 +79,6 @@ class Organism(mesa.Agent):
         }
         total = sum(new_dna.values())
         return {k: v / total for k, v in new_dna.items()}
-
 
     def reproduce(self):
         if self.energy >= 10.0:
