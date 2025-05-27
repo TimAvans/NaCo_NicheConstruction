@@ -9,6 +9,8 @@ from structure import Structure
 
 print(mesa.__version__)
 
+#TODO: Train and mate organisms in iterations to get the best organisms
+#TODO: Fitness function = n_steps_alive + n_energy_gathered - n_energy_used (metabolism)  
 niche_model = NicheModel(max_resource=2)
 
 def agent_portrayal(agent):

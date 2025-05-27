@@ -26,9 +26,11 @@ class Organism(mesa.Agent):
         self.move()
         self.consume()
         self.modify_environment()
+        #TODO: Remove repoduction because we reproduce only the best x amount of organisms
         if self.built:
             self.reproduce()
 
+    #TODO: Cannot move away from structure
     def move(self):
         possibilities = self.model.space.get_neighborhood(self.pos, moore=True, include_center=False)
         possibilities = list(possibilities)
@@ -40,6 +42,7 @@ class Organism(mesa.Agent):
                 self.model.space.move_agent(self, new_pos)
                 return 
     
+    #TODO: Organism needs a structure to survive
     def die(self):
         self.model.space.remove_agent(self)
         self.model.agents.remove(self)
