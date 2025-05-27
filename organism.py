@@ -1,20 +1,22 @@
 import mesa
 import numpy as np
 from structure import Structure
-'''
-TODO: Need building to reproduce?!
-'''
+
 class Organism(mesa.Agent):
     def __init__(self, model, energy = 5, dna = None):
         super().__init__(model)
         self.energy = energy
+        self.n_steps_alive = 0
+        self.total_energy_gathered = 0
         dna_values = np.random.dirichlet([1, 1, 1, 1])
+
         self.dna = dna or {
             "cooperation": dna_values[0],
             "consumption": dna_values[1],
             "metabolism": dna_values[2],
             "builder": dna_values[3],
         }
+
         self.built = False
 
     def step(self):
@@ -22,13 +24,10 @@ class Organism(mesa.Agent):
         if self.energy <= 0:
             self.die()
             return
-
+        self.n_steps_alive += 1
         self.move()
         self.consume()
         self.modify_environment()
-        #TODO: Remove repoduction because we reproduce only the best x amount of organisms
-        if self.built:
-            self.reproduce()
 
     #TODO: Cannot move away from structure
     def move(self):
@@ -72,16 +71,13 @@ class Organism(mesa.Agent):
         self.energy += consumed_amount
         self.model.environment[x][y] -= consumed_amount
         print(f"Agent with id {self.unique_id} consumed at location [{x}, {y}]")
+        self.total_energy_gathered += consumed_amount
 
         repair = self.dna["cooperation"] * self.model.cooperation_factor
         self.model.environment[x][y] = min(self.model.environment[x][y] + repair, self.model.max_resource)
 
-    def mutate_dna(self):
-        new_dna = {
-            k: max(0.001, v + self.random.gauss(0, 0.02)) for k, v in self.dna.items()
-        }
-        total = sum(new_dna.values())
-        return {k: v / total for k, v in new_dna.items()}
+    def dna_to_array(self):
+        return np.array([self.dna["cooperation"], self.dna["consumption"], self.dna["metabolism"], self.dna["builder"]])
 
     def reproduce(self):
         if self.energy >= 10.0:

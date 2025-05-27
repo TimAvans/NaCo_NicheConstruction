@@ -20,8 +20,7 @@ class NicheModel(mesa.Model):
         self.recharge_rate = recharge_rate
         self.cooperation_factor = cooperation_factor
         self.environment = np.full((width, height), max_resource)  
-        self.init_tiles()
-        self.init_organisms()
+        #self.init_tiles()
         
         self.datacollector = mesa.DataCollector(
             model_reporters={
@@ -51,6 +50,7 @@ class NicheModel(mesa.Model):
                 if any(isinstance(a, Tile) for a in contents):
                     continue 
                 tile = Tile((x, y), self)
+                self.space.remove_agent(tile)
                 self.space.place_agent(tile, (x, y))
                 self.agents.add(tile)
 
