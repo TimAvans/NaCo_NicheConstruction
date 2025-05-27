@@ -29,7 +29,7 @@ def plot_experiment_results(results, keys_to_plot=None, title="Experiment Metric
 #TODO: Changed the fitness function so discuss this
 def compute_fitness(organism: Organism):
     score = organism.n_steps_alive * 1.0
-    score += organism.energy * 0.5  
+    score += organism.total_energy_gathered * 0.5  
 
     score += organism.dna["cooperation"] * 1.5
     score += organism.dna["builder"] * 1.0
