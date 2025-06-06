@@ -75,9 +75,10 @@ class NicheModel(mesa.Model):
         print("Mix all organism positions")
 
     def step(self):
-
-        if self.step_count == 10:
+        #TODO: Extremely low as to not trigger until we want to make a baseline
+        if self.step_count == -1:
             self.mix_organisms()
+
         self.step_count+=1
 
         #TODO: Increase regen of adjacent tiles to structures?
