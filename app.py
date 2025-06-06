@@ -28,11 +28,13 @@ def agent_portrayal(agent):
         }
 
     if isinstance(agent, Organism):
-        c = float(agent.dna.get("cooperation", 0.0))
+        c = float(agent.dna.get("cooperate", 0.0))
+        scaled = min(max(c / 0.5, 0.0), 1.0)  # Maps [0.0, 0.5] → [0.0, 1.0]
         return {
-            "color": (1 - c, c, 0.0),  # red to green
+            "color": (1 - scaled, scaled, 0.0),  # red to green
             "size": 10
         }
+
 
     return None
 

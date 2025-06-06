@@ -3,12 +3,15 @@ import numpy as np
 from structure import Structure
 
 class Organism(mesa.Agent):
-    def __init__(self, model, energy = 10, dna = None):
+    def __init__(self, model, energy = 10, struct_radius = 2, coop_radius = 2, dna = None):
         super().__init__(model)
         self.energy = energy
+        self.coop_radius = coop_radius
+        self.struct_radius = struct_radius
         self.n_steps_alive = 0
         self.total_energy_gathered = 0
-        dna_values = np.random.dirichlet([1, 1, 1, 1, 1])
+        dna_values = np.random.dirichlet([1]*5)
+
         self.consume_rate = 1
         self.dna = dna or {
             "cooperate": dna_values[0],
@@ -29,7 +32,7 @@ class Organism(mesa.Agent):
         self.action_costs = {
             "move": 0.5,
             "consume": 0.2,
-            "cooperate": 0.6,
+            "cooperate": 0.5,
             "build": 2.0,
             "reproduce": 3.0,
         }
@@ -38,8 +41,13 @@ class Organism(mesa.Agent):
 
     '''
     TODO: Clearly define what each action the organism can take does (so we can state it clearly in the report)
+    TODO: Implement cooperation since now it is just an energy sink
     '''
     def step(self):
+        if self.pos is None:
+            print(f"Warning: Agent {self.unique_id} has no position!")
+            self.die()
+            return
         #Check if organism has 0 energy if it does it dies.
         if self.energy <= 0:
             self.die()
@@ -61,14 +69,53 @@ class Organism(mesa.Agent):
         succes = self.action_map[selected_action]()
         print(f"Agent with id {self.unique_id} choose the following action: {selected_action} and succeeded => {succes}")
     
+    '''
+    '''
     def cooperate(self):
+        if self.pos is None:
+            return False  
         if self.energy < self.action_costs["cooperate"]:
             return False
+
+        neighbors = self.model.space.get_neighbors(self.pos, moore=True, include_center=False, radius=self.coop_radius)
+        low_energy_neighbors = [a for a in neighbors if isinstance(a, Organism) and a.energy < 2]
+
+        shared = False
+        if low_energy_neighbors:
+            target = self.random.choice(low_energy_neighbors)
+            amount = min(1.0, self.energy - self.action_costs["cooperate"])
+            if amount > 0:
+                target.energy += amount
+                self.energy -= amount
+                print(f"Agent {self.unique_id} shared {amount:.2f} energy with {target.unique_id}")
+                shared = True
+
+        # Environmental restoration scaled by cooperation density
+        neighborhood = self.model.space.get_neighborhood(self.pos, moore=True, include_center=True, radius=self.coop_radius)
+        coop_agents_nearby = sum(
+            1 for pos in neighborhood
+            for a in self.model.space.get_cell_list_contents(pos)
+            if isinstance(a, Organism) and a.dna["cooperate"] > 0.15
+        )
+
+        for x, y in neighborhood:
+            self.model.environment[x][y] = min(
+                self.model.max_resource,
+                self.model.environment[x][y] + self.model.recharge_rate * (1 + 0.2 * coop_agents_nearby)
+            )
+
         self.energy -= self.action_costs["cooperate"]
+
+        if shared:
+            print(f"Agent {self.unique_id} also repaired the environment at {self.pos} with {coop_agents_nearby} allies")
+        else:
+            print(f"Agent {self.unique_id} repaired the environment at {self.pos} but found no one to help (density = {coop_agents_nearby})")
+
         return True
-    
-    #TODO: Cannot move away from structure
+        
     def move(self):
+        if self.pos is None:
+            return False  
         if self.energy < self.action_costs["move"]:
             return False
         self.energy -= self.action_costs["move"]
@@ -84,13 +131,14 @@ class Organism(mesa.Agent):
                 return True
         return False
     
-    #TODO: Organism needs a structure to survive
     def die(self):
         self.model.space.remove_agent(self)
         self.model.agents.remove(self)
         print(f"Agent with id {self.unique_id} died due to energy level")
 
     def modify_environment(self):
+        if self.pos is None:
+            return False         
         if self.energy < self.action_costs["build"]:
             return False
         
@@ -116,39 +164,57 @@ class Organism(mesa.Agent):
         current_amount = self.model.environment[x][y]
         consumption_capacity = self.consume_rate
         consumed_amount = min(current_amount, consumption_capacity)
+        if consumed_amount <= 0:
+            return False
         self.energy += consumed_amount
         self.model.environment[x][y] -= consumed_amount
         print(f"Agent with id {self.unique_id} consumed {consumed_amount} at location [{x}, {y}]")
         self.total_energy_gathered += consumed_amount
         return True
     
-        #Removed cooperation here since this sim is mostly about buildings and reproduction, fix the base first
-        # repair = self.dna["cooperation"] * self.model.cooperation_factor
-        # self.model.environment[x][y] = min(self.model.environment[x][y] + repair, self.model.max_resource)
-
     def mutate_dna(self):
         new_dna = {
-            k: max(0.001, v + self.random.gauss(0, 0.02)) for k, v in self.dna.items()
+            k: max(0.001, v + self.random.gauss(0, self.model.mutation_scale)) for k, v in self.dna.items()
         }
         total = sum(new_dna.values())
         return {k: v / total for k, v in new_dna.items()}
 
     def reproduce(self):
-        if self.energy < self.action_costs["reproduce"]:
-            return False
-        self.energy -= self.action_costs["reproduce"]
-        if self.random.random() < self.model.mutation_rate:
-            child_dna = self.mutate_dna()
-        else:
-            child_dna = dict(self.dna)
+        repro_cost = self.action_costs["reproduce"]
 
-        child = Organism(self.model, energy=self.energy, dna=child_dna)
-        neighbors = self.model.space.get_neighborhood(self.pos, moore=True, include_center=False)
-        neighbors = list(neighbors)
+        # Check for nearby structure
+        nearby = self.model.space.get_neighborhood(self.pos, moore=True, include_center=True, radius=self.struct_radius)
+        structure_found = any(
+            isinstance(a, Structure)
+            for pos in nearby
+            for a in self.model.space.get_cell_list_contents(pos)
+        )
+        if not structure_found:
+            print(f"Agent {self.unique_id} found no nearby structure to reproduce")
+            return False
+
+        # Find free spot first
+        if self.pos is None:
+            print(f"Agent {self.unique_id} has no position during reproduction — skipping.")
+            return False
+
+        neighbors = list(self.model.space.get_neighborhood(self.pos, moore=True, include_center=False))
         self.random.shuffle(neighbors)
         for pos in neighbors:
             if not any(isinstance(a, Organism) for a in self.model.space.get_cell_list_contents(pos)):
+                # Place child only if position is available
+                if self.random.random() < self.model.mutation_rate:
+                    print(f"Agent with id {self.unique_id} is reproducing and mutated its child")
+                    child_dna = self.mutate_dna()
+                else:
+                    print(f"Agent with id {self.unique_id} is reproducing")
+                    child_dna = dict(self.dna)
+
+                child = Organism(self.model, dna=child_dna)
                 self.model.space.place_agent(child, pos)
                 self.model.agents.add(child)
+                self.energy -= repro_cost
                 return True
+
+        print(f"Agent {self.unique_id} failed to place offspring")
         return False

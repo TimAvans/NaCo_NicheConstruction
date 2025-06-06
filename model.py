@@ -9,14 +9,16 @@ from structure import Structure
 
 '''
 class NicheModel(mesa.Model):    
-    def __init__(self, n_agents = 5, width = 25, height = 25, max_resource = 5.0, recharge_rate = 0.25, mutation_rate= 0.01, cooperation_factor=0.05):
+    def __init__(self, n_agents = 5, width = 25, height = 25, max_resource = 5.0, recharge_rate = 0.25, mutation_rate= 0.05, mutation_scale = 0.02, cooperation_factor=0.05):
         super().__init__()
+        self.step_count = 0
         self.grid = mesa.space.MultiGrid(width, height, torus=True)
         self.width = width
         self.height = height
         self.n_agents = n_agents
         self.space = self.grid
         self.mutation_rate = mutation_rate
+        self.mutation_scale = mutation_scale
         self.max_resource = max_resource
         self.recharge_rate = recharge_rate
         self.cooperation_factor = cooperation_factor
@@ -40,10 +42,13 @@ class NicheModel(mesa.Model):
 
     def init_organisms(self):
         for _ in range(self.n_agents):
-            x = self.random.randrange(self.width)
-            y = self.random.randrange(self.height)
             agent = Organism(self)
-            self.space.place_agent(agent, (x, y))
+            while True:
+                x = self.random.randrange(self.width)
+                y = self.random.randrange(self.height)
+                if not any(isinstance(a, Organism) for a in self.space.get_cell_list_contents((x, y))):
+                    self.space.place_agent(agent, (x, y))
+                    break
             self.agents.add(agent)
 
     def init_tiles(self):
@@ -58,8 +63,24 @@ class NicheModel(mesa.Model):
     '''
     TODO: Make a function which mixes the agents (location wise) as to show how much local environment matters
     '''
+    def mix_organisms(self):
+        #Get all organisms
+        organisms = [agent for agent in self.agents if isinstance(agent, Organism)]
+        #Get all possible positions on the grid
+        all_positions = [(x, y) for x in range(self.space.width) for y in range(self.space.height)]
+        #Shuffle and assign new positions to each organism
+        self.random.shuffle(all_positions)
+        for agent, new_pos in zip(organisms, all_positions):
+            self.space.move_agent(agent, new_pos)
+        print("Mix all organism positions")
+
     def step(self):
-        #TODO: Remove regen of adjacent tiles to structures
+
+        if self.step_count == 10:
+            self.mix_organisms()
+        self.step_count+=1
+
+        #TODO: Increase regen of adjacent tiles to structures?
         for x in range(self.space.width):
             for y in range(self.space.height):
                 if not any(isinstance(a, Structure) for a in self.space.get_cell_list_contents((x, y))):
