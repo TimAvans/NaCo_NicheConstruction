@@ -4,6 +4,7 @@ import numpy as np
 from tile import Tile
 from structure import Structure
 
+
 '''
 
 '''
@@ -20,16 +21,18 @@ class NicheModel(mesa.Model):
         self.recharge_rate = recharge_rate
         self.cooperation_factor = cooperation_factor
         self.environment = np.full((width, height), max_resource)  
-        #self.init_tiles()
-        
+        self.init_tiles()
+        self.init_organisms()
+
         self.datacollector = mesa.DataCollector(
             model_reporters={
             "OrganismCount": lambda m: sum(isinstance(a, Organism) for a in m.agents),
             "MeanEnergy": lambda m: np.mean([a.energy for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
-            "MeanCooperation": lambda m: np.mean([a.dna["cooperation"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
-            "MeanConsumption": lambda m: np.mean([a.dna["consumption"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
-            "MeanMetabolism": lambda m: np.mean([a.dna["metabolism"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
-            "MeanBuilder": lambda m: np.mean([a.dna["builder"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
+            "MeanCooperation": lambda m: np.mean([a.dna["cooperate"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
+            "MeanConsumption": lambda m: np.mean([a.dna["consume"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
+            "MeanBuilder": lambda m: np.mean([a.dna["build"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
+            "MeanReproduction": lambda m: np.mean([a.dna["reproduce"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
+            "MeanMovement": lambda m: np.mean([a.dna["move"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
             "MeanResource": lambda m: np.mean(m.environment),
             "StructureCount": lambda m: sum(isinstance(a, Structure) for a in m.agents),
             }
@@ -47,13 +50,14 @@ class NicheModel(mesa.Model):
         for x in range(self.width):
             for y in range(self.height):
                 contents = self.space.get_cell_list_contents((x, y))
-                if any(isinstance(a, Tile) for a in contents):
-                    continue 
-                tile = Tile((x, y), self)
-                self.space.remove_agent(tile)
-                self.space.place_agent(tile, (x, y))
-                self.agents.add(tile)
+                if not any(isinstance(a, Tile) for a in contents):
+                    tile = Tile(self)
+                    self.space.place_agent(tile, (x, y))
+                    self.agents.add(tile)
 
+    '''
+    TODO: Make a function which mixes the agents (location wise) as to show how much local environment matters
+    '''
     def step(self):
         #TODO: Remove regen of adjacent tiles to structures
         for x in range(self.space.width):
