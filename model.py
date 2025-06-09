@@ -36,6 +36,8 @@ class NicheModel(mesa.Model):
                 "MeanResourceA": lambda m: np.mean(m.environment),
                 "AvgLifespanA": lambda m: np.mean(m.dead_ages) if m.dead_ages else 0,
                 "StructureCountA": lambda m: sum(isinstance(a, Structure) for a in m.agents),
+                "CooperatorsA": lambda m: sum(1 for a in m.agents if isinstance(a, OrganismA) and a.dna["cooperate"] >= 0.15),
+                "NonCooperatorsA": lambda m: sum(1 for a in m.agents if isinstance(a, OrganismA) and a.dna["cooperate"] < 0.15),   
 
                 "OrganismCountB": lambda m: sum(isinstance(a, OrganismB) for a in m.agents),
                 "MeanEnergyB": lambda m: np.mean([a.energy for a in m.agents if isinstance(a, OrganismB)]) if any(isinstance(a, OrganismB) for a in m.agents) else 0,
@@ -47,13 +49,10 @@ class NicheModel(mesa.Model):
                 "MeanResourceB": lambda m: np.mean(m.environment),
                 "AvgLifespanB": lambda m: np.mean(m.dead_ages) if m.dead_ages else 0,
                 "StructureCountB": lambda m: sum(isinstance(a, Structure) for a in m.agents),
+                "CooperatorsB": lambda m: sum(1 for a in m.agents if isinstance(a, OrganismB) and a.dna["cooperate"] >= 0.15),
+                "NonCooperatorsB": lambda m: sum(1 for a in m.agents if isinstance(a, OrganismB) and a.dna["cooperate"] < 0.15),   
 
-                "TotalPopulation": lambda m: sum(isinstance(a, (OrganismA, OrganismB)) for a in m.agents)
-
-
-            "StructureCount": lambda m: sum(isinstance(a, Structure) for a in m.agents),
-            "Cooperators": lambda m: sum(1 for a in m.agents if isinstance(a, Organism) and a.dna["cooperate"] >= 0.15),
-            "NonCooperators": lambda m: sum(1 for a in m.agents if isinstance(a, Organism) and a.dna["cooperate"] < 0.15),            
+                "TotalPopulation": lambda m: sum(isinstance(a, (OrganismA, OrganismB)) for a in m.agents)         
             }
         )
     def init_organisms(self):

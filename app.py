@@ -67,6 +67,8 @@ plot_dna_5_a = make_plot_component("MeanMovementA", backend="matplotlib")
 plot_population_a = make_plot_component("OrganismCountA", backend="matplotlib")
 plot_structures_a = make_plot_component("StructureCountA", backend="matplotlib")
 plot_age_a = make_plot_component("AvgLifespanA", backend="matplotlib")
+plot_cooperators_a = make_plot_component("CooperatorsA", backend="matplotlib")
+plot_noncooperatores_a = make_plot_component("NonCooperatorsA", backend="matplotlib")
 
 resource_plot = make_plot_component("MeanResourceB", backend="matplotlib")
 energy_plot = make_plot_component("MeanEnergyB", backend="matplotlib")
@@ -78,9 +80,8 @@ plot_dna_5 = make_plot_component("MeanMovementB", backend="matplotlib")
 plot_population = make_plot_component("OrganismCountB", backend="matplotlib")
 plot_structures = make_plot_component("StructureCountB", backend="matplotlib")
 plot_age = make_plot_component("AvgLifespanB", backend="matplotlib")
-
-plot_cooperators = make_plot_component("Cooperators", backend="matplotlib")
-plot_noncooperatores = make_plot_component("NonCooperators", backend="matplotlib")
+plot_cooperators = make_plot_component("CooperatorsB", backend="matplotlib")
+plot_noncooperatores = make_plot_component("NonCooperatorsB", backend="matplotlib")
 
 plot_total = make_plot_component("TotalPopulation", backend="matplotlib")
 
@@ -89,10 +90,10 @@ plot_total = make_plot_component("TotalPopulation", backend="matplotlib")
 page = SolaraViz(
     niche_model,
     components=[space_component, resource_plot_a, energy_plot_a, plot_dna_1_a, plot_dna_2_a, plot_dna_3_a, 
-                plot_dna_4_a, plot_dna_5_a, plot_population_a, plot_structures_a, plot_age_a,  
+                plot_dna_4_a, plot_dna_5_a, plot_population_a, plot_structures_a, plot_age_a, plot_cooperators_a, plot_noncooperatores_a,  
                 resource_plot, energy_plot, plot_dna_1, plot_dna_2, plot_dna_3, 
-                plot_dna_4, plot_dna_5, plot_population, plot_structures, plot_age, plot_total, 
-                plot_cooperators, plot_noncooperatores, plot_structures],
+                plot_dna_4, plot_dna_5, plot_population, plot_structures, plot_age, 
+                plot_cooperators, plot_noncooperatores, plot_total],
     model_params=model_params,
     name="Niche Construction Model: Third Experiment, Competing Species with Distinct Niche Strategies"
 )
