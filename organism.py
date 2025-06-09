@@ -5,7 +5,7 @@ import logging
 
 # Set up logging configuration at the beginning 
 logging.basicConfig(
-    filename='experiment1.log',
+    filename='experiment3.log',
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     filemode='w'  # 'w' to overwrite, 'a' to append
@@ -26,6 +26,7 @@ class Organism(mesa.Agent):
         self.dna = dna or {
             "cooperate": dna_values[0],
             "consume": dna_values[1],
+            "build": dna_values[2],
             "move": dna_values[3],
             "reproduce": dna_values[4],
         }
@@ -33,6 +34,7 @@ class Organism(mesa.Agent):
         self.action_map = {
             "cooperate": self.cooperate,
             "consume": self.consume,
+            "build": self.modify_environment,
             "move": self.move,
             "reproduce": self.reproduce,
         }
@@ -41,7 +43,8 @@ class Organism(mesa.Agent):
             "move": 0.5,
             "consume": 0.2,
             "cooperate": 0.5,
-            "reproduce": 3.0,
+            "build": 2.0,
+            "reproduce": 5.0,
         }
 
         self.built = False
@@ -108,7 +111,7 @@ class Organism(mesa.Agent):
             for a in self.model.space.get_cell_list_contents(pos)
             if isinstance(a, Organism) and a.dna["cooperate"] > 0.15
         )
-
+        
         for x, y in neighborhood:
             self.model.environment[x][y] = min(
                 self.model.max_resource,
@@ -152,9 +155,22 @@ class Organism(mesa.Agent):
         print(f"Agent with id {self.unique_id} died at age {self.age}")
         logging.info(f"Agent with id {self.unique_id} died at age {self.age}")
 
+
     def modify_environment(self):
         if self.pos is None:
             return False         
+        if self.energy < self.action_costs["build"]:
+            return False
+        
+        x, y = self.pos
+        contents = self.model.space.get_cell_list_contents((x, y))
+        if not any(isinstance(a, Structure) for a in contents):
+            self.energy -= self.action_costs["build"]
+            struct = Structure(self.model)
+            self.model.space.place_agent(struct, (x, y))
+            self.model.agents.add(struct)
+            self.built = True
+            print(f"Agent with id {self.unique_id} build a structure at [{x}, {y}]")
         return True
     
     def consume(self):
@@ -182,17 +198,27 @@ class Organism(mesa.Agent):
             k: max(0.001, v + self.random.gauss(0, self.model.mutation_scale)) for k, v in self.dna.items()
         }
         total = sum(new_dna.values())
-        return {k: v / total for k, v in new_dna.items()}
+        return {k: float(v / total) for k, v in new_dna.items()} # to be safe
 
     def reproduce(self):
         repro_cost = self.action_costs["reproduce"]
         if self.energy < repro_cost:
             return False
+        
+        # Check for nearby structure
+        nearby = self.model.space.get_neighborhood(self.pos, moore=True, include_center=True, radius=self.struct_radius)
+        structure_found = any(
+            isinstance(a, Structure)
+            for pos in nearby
+            for a in self.model.space.get_cell_list_contents(pos)
+        )
+        if not structure_found:
+            print(f"Agent {self.unique_id} found no nearby structure to reproduce")
+            return False
 
         # Find free spot first
         if self.pos is None:
             print(f"Agent {self.unique_id} has no position during reproduction — skipping.")
-            logging.warning(f"Agent {self.unique_id} has no position during reproduction — skipping.")
             return False
 
         neighbors = list(self.model.space.get_neighborhood(self.pos, moore=True, include_center=False))
@@ -202,11 +228,9 @@ class Organism(mesa.Agent):
                 # Place child only if position is available
                 if self.random.random() < self.model.mutation_rate:
                     print(f"Agent with id {self.unique_id} is reproducing and mutated its child")
-                    logging.info(f"Agent with id {self.unique_id} is reproducing and mutated its child")
                     child_dna = self.mutate_dna()
                 else:
                     print(f"Agent with id {self.unique_id} is reproducing")
-                    logging.info(f"Agent with id {self.unique_id} is reproducing")
                     child_dna = dict(self.dna)
 
                 child = Organism(self.model, dna=child_dna)
@@ -216,5 +240,24 @@ class Organism(mesa.Agent):
                 return True
 
         print(f"Agent {self.unique_id} failed to place offspring")
-        logging.info(f"Agent {self.unique_id} failed to place offspring")
         return False
+
+
+class OrganismA(Organism):  # Environmental Enricher
+    def __init__(self, model, energy = 10, struct_radius = 2, coop_radius = 2, dna = None):
+        super().__init__(model, energy)
+        self.dna["consume"] = 0.6
+        self.dna["move"] = 0.2
+        self.dna["build"] = 0.4        
+        self.dna["cooperate"] = 0.6
+        self.dna["reproduce"] = 0.4
+
+class OrganismB(Organism):  # Aggressive Consumer
+    def __init__(self, model, energy = 10, struct_radius = 2, coop_radius = 2, dna = None):
+        super().__init__(model, energy)
+        self.dna["consume"] = 1.0
+        self.dna["move"] = 0.3
+        self.dna["build"] = 0.4        
+        self.dna["cooperate"] = -0.1  # Corrupts environment
+        self.dna["reproduce"] = 0.4
+
