@@ -23,6 +23,7 @@ class NicheModel(mesa.Model):
         self.recharge_rate = recharge_rate
         self.cooperation_factor = cooperation_factor
         self.environment = np.full((width, height), max_resource)  
+        self.dead_ages = []
         self.init_tiles()
         self.init_organisms()
 
@@ -36,6 +37,7 @@ class NicheModel(mesa.Model):
             "MeanReproduction": lambda m: np.mean([a.dna["reproduce"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
             "MeanMovement": lambda m: np.mean([a.dna["move"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
             "MeanResource": lambda m: np.mean(m.environment),
+            "AvgLifespan": lambda m: np.mean(m.dead_ages) if m.dead_ages else 0,
             "StructureCount": lambda m: sum(isinstance(a, Structure) for a in m.agents),
             }
         )

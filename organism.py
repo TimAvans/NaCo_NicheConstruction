@@ -10,6 +10,7 @@ class Organism(mesa.Agent):
         self.struct_radius = struct_radius
         self.n_steps_alive = 0
         self.total_energy_gathered = 0
+        self.age = 0
         dna_values = np.random.dirichlet([1]*5)
 
         self.consume_rate = 1
@@ -67,6 +68,7 @@ class Organism(mesa.Agent):
         # Select action based on normalized DNA weights
         selected_action = self.random.choices(population=actions, weights=probs)[0]
         succes = self.action_map[selected_action]()
+        self.age += 1
         print(f"Agent with id {self.unique_id} choose the following action: {selected_action} and succeeded => {succes}")
     
     '''
@@ -132,9 +134,11 @@ class Organism(mesa.Agent):
         return False
     
     def die(self):
-        self.model.space.remove_agent(self)
-        self.model.agents.remove(self)
-        print(f"Agent with id {self.unique_id} died due to energy level")
+        if self.pos is not None:
+            self.model.dead_ages.append(self.age)
+            self.model.space.remove_agent(self)
+        self.model.agents.discard(self)  # safer than remove
+        print(f"Agent with id {self.unique_id} died at age {self.age}")
 
     def modify_environment(self):
         if self.pos is None:
