@@ -1,6 +1,15 @@
 import mesa
 import numpy as np
 from structure import Structure
+import logging
+
+# Set up logging configuration at the beginning 
+logging.basicConfig(
+    filename='experiment1.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    filemode='w'  # 'w' to overwrite, 'a' to append
+)
 
 class OrganismBase(mesa.Agent):
     def __init__(self, model, energy = 5, dna = None):
@@ -21,13 +30,13 @@ class Organism(mesa.Agent):
         self.struct_radius = struct_radius
         self.n_steps_alive = 0
         self.total_energy_gathered = 0
+        self.age = 0
         dna_values = np.random.dirichlet([1]*5)
 
         self.consume_rate = 1
         self.dna = dna or {
             "cooperate": dna_values[0],
             "consume": dna_values[1],
-            "build": dna_values[2],
             "move": dna_values[3],
             "reproduce": dna_values[4],
         }
@@ -35,7 +44,6 @@ class Organism(mesa.Agent):
         self.action_map = {
             "cooperate": self.cooperate,
             "consume": self.consume,
-            "build": self.modify_environment,
             "move": self.move,
             "reproduce": self.reproduce,
         }
@@ -44,7 +52,6 @@ class Organism(mesa.Agent):
             "move": 0.5,
             "consume": 0.2,
             "cooperate": 0.5,
-            "build": 2.0,
             "reproduce": 3.0,
         }
 
@@ -57,6 +64,7 @@ class Organism(mesa.Agent):
     def step(self):
         if self.pos is None:
             print(f"Warning: Agent {self.unique_id} has no position!")
+            logging.warning(f"Agent {self.unique_id} has no position!")
             self.die()
             return
         #Check if organism has 0 energy if it does it dies.
@@ -78,7 +86,9 @@ class Organism(mesa.Agent):
         # Select action based on normalized DNA weights
         selected_action = self.random.choices(population=actions, weights=probs)[0]
         succes = self.action_map[selected_action]()
+        self.age += 1
         print(f"Agent with id {self.unique_id} choose the following action: {selected_action} and succeeded => {succes}")
+        logging.info(f"Agent with id {self.unique_id} choose the following action: {selected_action} and succeeded => {succes}")
     
     '''
     '''
@@ -99,6 +109,7 @@ class Organism(mesa.Agent):
                 target.energy += amount
                 self.energy -= amount
                 print(f"Agent {self.unique_id} shared {amount:.2f} energy with {target.unique_id}")
+                logging.info(f"Agent {self.unique_id} shared {amount:.2f} energy with {target.unique_id}")
                 shared = True
 
         # Environmental restoration scaled by cooperation density
@@ -119,8 +130,10 @@ class Organism(mesa.Agent):
 
         if shared:
             print(f"Agent {self.unique_id} also repaired the environment at {self.pos} with {coop_agents_nearby} allies")
+            logging.info(f"Agent {self.unique_id} also repaired the environment at {self.pos} with {coop_agents_nearby} allies")
         else:
             print(f"Agent {self.unique_id} repaired the environment at {self.pos} but found no one to help (density = {coop_agents_nearby})")
+            logging.info(f"Agent {self.unique_id} repaired the environment at {self.pos} but found no one to help (density = {coop_agents_nearby})")
 
         return True
         
@@ -143,26 +156,17 @@ class Organism(mesa.Agent):
         return False
     
     def die(self):
-        self.model.space.remove_agent(self)
-        self.model.agents.remove(self)
-        print(f"Agent with id {self.unique_id} died due to energy level")
+        if self.pos is not None:
+            self.model.dead_ages.append(self.age)
+            self.model.space.remove_agent(self)
+        self.model.agents.discard(self)  # safer than remove
+        print(f"Agent with id {self.unique_id} died at age {self.age}")
+        logging.info(f"Agent with id {self.unique_id} died at age {self.age}")
 
 
     def modify_environment(self):
         if self.pos is None:
             return False         
-        if self.energy < self.action_costs["build"]:
-            return False
-        
-        x, y = self.pos
-        contents = self.model.space.get_cell_list_contents((x, y))
-        if not any(isinstance(a, Structure) for a in contents):
-            self.energy -= self.action_costs["build"]
-            struct = Structure(self.model)
-            self.model.space.place_agent(struct, (x, y))
-            self.model.agents.add(struct)
-            self.built = True
-            print(f"Agent with id {self.unique_id} build a structure at [{x}, {y}]")
         return True
     
     def consume(self):
@@ -181,6 +185,7 @@ class Organism(mesa.Agent):
         self.energy += consumed_amount
         self.model.environment[x][y] -= consumed_amount
         print(f"Agent with id {self.unique_id} consumed {consumed_amount} at location [{x}, {y}]")
+        logging.info(f"Agent with id {self.unique_id} consumed {consumed_amount} at location [{x}, {y}]")
         self.total_energy_gathered += consumed_amount
         return True
     
@@ -241,21 +246,13 @@ class OrganismB(OrganismBase):  # Aggressive Consumer
 
     def reproduce(self):
         repro_cost = self.action_costs["reproduce"]
-
-        # Check for nearby structure
-        nearby = self.model.space.get_neighborhood(self.pos, moore=True, include_center=True, radius=self.struct_radius)
-        structure_found = any(
-            isinstance(a, Structure)
-            for pos in nearby
-            for a in self.model.space.get_cell_list_contents(pos)
-        )
-        if not structure_found:
-            print(f"Agent {self.unique_id} found no nearby structure to reproduce")
+        if self.energy < repro_cost:
             return False
 
         # Find free spot first
         if self.pos is None:
             print(f"Agent {self.unique_id} has no position during reproduction — skipping.")
+            logging.warning(f"Agent {self.unique_id} has no position during reproduction — skipping.")
             return False
 
         neighbors = list(self.model.space.get_neighborhood(self.pos, moore=True, include_center=False))
@@ -265,9 +262,11 @@ class OrganismB(OrganismBase):  # Aggressive Consumer
                 # Place child only if position is available
                 if self.random.random() < self.model.mutation_rate:
                     print(f"Agent with id {self.unique_id} is reproducing and mutated its child")
+                    logging.info(f"Agent with id {self.unique_id} is reproducing and mutated its child")
                     child_dna = self.mutate_dna()
                 else:
                     print(f"Agent with id {self.unique_id} is reproducing")
+                    logging.info(f"Agent with id {self.unique_id} is reproducing")
                     child_dna = dict(self.dna)
 
                 child = Organism(self.model, dna=child_dna)
@@ -277,4 +276,5 @@ class OrganismB(OrganismBase):  # Aggressive Consumer
                 return True
 
         print(f"Agent {self.unique_id} failed to place offspring")
+        logging.info(f"Agent {self.unique_id} failed to place offspring")
         return False

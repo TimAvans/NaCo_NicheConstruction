@@ -10,3 +10,4 @@ This repository contains the code base of a project which was executed for the c
 We introduce two distinct agent species of A (Environmental Enricher) and B (Aggressive Consumer) in this experiment. Each agent is equipped with predefined niche-construction behaviors. Specie A enrich the environment by promoting food growth, while specie B corrupts the environment through aggressive resource consumption. 
 
 Objective: Explore the ecological and evolutionary dynamics arising from inter-species competition. Key outcomes include scenarios of coexistence, dominance by one species, or mutual extinction due to unsustainable strategies.
+

@@ -7,7 +7,8 @@ import solara
 import mesa
 from structure import Structure
 
-print("Mesa version:", mesa.__version__)
+
+print(mesa.__version__)
 
 # Agent appearance logic
 def agent_portrayal(agent):
@@ -72,17 +73,19 @@ energy_plot = make_plot_component("MeanEnergy", backend="matplotlib")
 plot_dna_1 = make_plot_component("MeanCooperation", backend="matplotlib")
 plot_dna_2 = make_plot_component("MeanConsumption", backend="matplotlib")
 plot_dna_3 = make_plot_component("MeanReproduction", backend="matplotlib")
-plot_dna_4 = make_plot_component("MeanBuilder", backend="matplotlib")
+# plot_dna_4 = make_plot_component("MeanBuilder", backend="matplotlib")
 plot_dna_5 = make_plot_component("MeanMovement", backend="matplotlib")
 plot_population = make_plot_component("OrganismCount", backend="matplotlib")
 plot_structures = make_plot_component("StructureCount", backend="matplotlib")
+plot_age = make_plot_component("AvgLifespan", backend="matplotlib")
 
 # Interactive web app
 page = SolaraViz(
     niche_model,
     components=[space_component, resource_plot, energy_plot, plot_dna_1, plot_dna_2, plot_dna_3, 
-                plot_dna_4, plot_dna_5, plot_population, plot_structures],
+                plot_dna_5, plot_population, plot_structures, plot_age],
     model_params=model_params,
     name="Niche Construction Model: Third Experiment, Competing Species with Distinct Niche Strategies"
 )
 #page
+
