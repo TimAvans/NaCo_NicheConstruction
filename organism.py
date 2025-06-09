@@ -183,7 +183,9 @@ class Organism(mesa.Agent):
 
     def reproduce(self):
         repro_cost = self.action_costs["reproduce"]
-
+        if self.energy < repro_cost:
+            return False
+        
         # Check for nearby structure
         nearby = self.model.space.get_neighborhood(self.pos, moore=True, include_center=True, radius=self.struct_radius)
         structure_found = any(
