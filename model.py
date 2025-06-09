@@ -7,7 +7,7 @@ from structure import Structure
 
 
 class NicheModel(mesa.Model):    
-    def __init__(self, n_agents = 5, width = 25, height = 25, max_resource = 5.0, recharge_rate = 0.25, mutation_rate= 0.05, mutation_scale = 0.02, cooperation_factor=0.05):
+    def __init__(self, n_agents = 5, width = 25, height = 25, max_resource = 5.0, recharge_rate = 0.25, mutation_rate= 0.05, mutation_scale = 0.02, ):
         super().__init__()
         self.step_count = 0
         self.grid = mesa.space.MultiGrid(width, height, torus=True)
@@ -19,7 +19,6 @@ class NicheModel(mesa.Model):
         self.mutation_scale = mutation_scale
         self.max_resource = max_resource
         self.recharge_rate = recharge_rate
-        self.cooperation_factor = cooperation_factor
         self.environment = np.full((width, height), max_resource)  
         self.dead_ages = []
         self.init_tiles()
@@ -51,6 +50,10 @@ class NicheModel(mesa.Model):
 
                 "TotalPopulation": lambda m: sum(isinstance(a, (OrganismA, OrganismB)) for a in m.agents)
 
+
+            "StructureCount": lambda m: sum(isinstance(a, Structure) for a in m.agents),
+            "Cooperators": lambda m: sum(1 for a in m.agents if isinstance(a, Organism) and a.dna["cooperate"] >= 0.15),
+            "NonCooperators": lambda m: sum(1 for a in m.agents if isinstance(a, Organism) and a.dna["cooperate"] < 0.15),            
             }
         )
     def init_organisms(self):
