@@ -33,7 +33,7 @@ class NicheModel(mesa.Model):
             "MeanEnergy": lambda m: np.mean([a.energy for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
             "MeanCooperation": lambda m: np.mean([a.dna["cooperate"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
             "MeanConsumption": lambda m: np.mean([a.dna["consume"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
-            "MeanBuilder": lambda m: np.mean([a.dna["build"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
+            # "MeanBuilder": lambda m: np.mean([a.dna["build"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
             "MeanReproduction": lambda m: np.mean([a.dna["reproduce"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
             "MeanMovement": lambda m: np.mean([a.dna["move"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
             "MeanResource": lambda m: np.mean(m.environment),

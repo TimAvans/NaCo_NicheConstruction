@@ -5,7 +5,7 @@ import logging
 
 # Set up logging configuration at the beginning 
 logging.basicConfig(
-    filename='simulation.log',
+    filename='experiment1.log',
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     filemode='w'  # 'w' to overwrite, 'a' to append
@@ -26,7 +26,6 @@ class Organism(mesa.Agent):
         self.dna = dna or {
             "cooperate": dna_values[0],
             "consume": dna_values[1],
-            "build": dna_values[2], # change to 0 for experiment 1
             "move": dna_values[3],
             "reproduce": dna_values[4],
         }
@@ -34,7 +33,6 @@ class Organism(mesa.Agent):
         self.action_map = {
             "cooperate": self.cooperate,
             "consume": self.consume,
-            "build": self.modify_environment, # change to 0 for experiment 1
             "move": self.move,
             "reproduce": self.reproduce,
         }
@@ -43,7 +41,6 @@ class Organism(mesa.Agent):
             "move": 0.5,
             "consume": 0.2,
             "cooperate": 0.5,
-            "build": 2.0,
             "reproduce": 3.0,
         }
 
@@ -158,19 +155,6 @@ class Organism(mesa.Agent):
     def modify_environment(self):
         if self.pos is None:
             return False         
-        if self.energy < self.action_costs["build"]:
-            return False
-        
-        x, y = self.pos
-        contents = self.model.space.get_cell_list_contents((x, y))
-        if not any(isinstance(a, Structure) for a in contents):
-            self.energy -= self.action_costs["build"]
-            struct = Structure(self.model)
-            self.model.space.place_agent(struct, (x, y))
-            self.model.agents.add(struct)
-            self.built = True
-            print(f"Agent with id {self.unique_id} build a structure at [{x}, {y}]")
-            logging.info(f"Agent with id {self.unique_id} build a structure at [{x}, {y}]")
         return True
     
     def consume(self):
@@ -203,18 +187,6 @@ class Organism(mesa.Agent):
     def reproduce(self):
         repro_cost = self.action_costs["reproduce"]
         if self.energy < repro_cost:
-            return False
-        
-        # Check for nearby structure
-        nearby = self.model.space.get_neighborhood(self.pos, moore=True, include_center=True, radius=self.struct_radius)
-        structure_found = any(
-            isinstance(a, Structure)
-            for pos in nearby
-            for a in self.model.space.get_cell_list_contents(pos)
-        )
-        if not structure_found:
-            print(f"Agent {self.unique_id} found no nearby structure to reproduce")
-            logging.info(f"Agent {self.unique_id} found no nearby structure to reproduce")
             return False
 
         # Find free spot first
