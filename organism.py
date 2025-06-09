@@ -10,6 +10,9 @@ class Organism(mesa.Agent):
         self.struct_radius = struct_radius
         self.n_steps_alive = 0
         self.total_energy_gathered = 0
+        self.offspring_count = 0
+        self.times_shared = 0
+        self.age = 0
         dna_values = np.random.dirichlet([1]*5)
 
         self.consume_rate = 1
@@ -69,8 +72,6 @@ class Organism(mesa.Agent):
         succes = self.action_map[selected_action]()
         print(f"Agent with id {self.unique_id} choose the following action: {selected_action} and succeeded => {succes}")
     
-    '''
-    '''
     def cooperate(self):
         if self.pos is None:
             return False  
@@ -119,7 +120,7 @@ class Organism(mesa.Agent):
         if self.energy < self.action_costs["move"]:
             return False
         self.energy -= self.action_costs["move"]
-
+        self.age += 1
         possibilities = self.model.space.get_neighborhood(self.pos, moore=True, include_center=False)
         possibilities = list(possibilities)
         self.random.shuffle(possibilities)
@@ -132,11 +133,15 @@ class Organism(mesa.Agent):
         return False
     
     def die(self):
-        self.model.space.remove_agent(self)
-        self.model.agents.remove(self)
-        print(f"Agent with id {self.unique_id} died due to energy level")
+        if self.pos is not None:
+            self.model.dead_ages.append(self.age)
+            self.model.space.remove_agent(self)
+        self.model.agents.discard(self)  # safer than remove
+        print(f"Agent with id {self.unique_id} died at age {self.age}")
+
 
     def modify_environment(self):
+        """Plant food based on planting trait."""
         if self.pos is None:
             return False         
         if self.energy < self.action_costs["build"]:

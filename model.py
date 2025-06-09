@@ -5,9 +5,7 @@ from tile import Tile
 from structure import Structure
 
 
-'''
 
-'''
 class NicheModel(mesa.Model):    
     def __init__(self, n_agents = 5, width = 25, height = 25, max_resource = 5.0, recharge_rate = 0.25, mutation_rate= 0.05, mutation_scale = 0.02, cooperation_factor=0.05):
         super().__init__()
@@ -23,6 +21,7 @@ class NicheModel(mesa.Model):
         self.recharge_rate = recharge_rate
         self.cooperation_factor = cooperation_factor
         self.environment = np.full((width, height), max_resource)  
+        self.dead_ages = []
         self.init_tiles()
         self.init_organisms()
 
@@ -37,6 +36,8 @@ class NicheModel(mesa.Model):
             "MeanMovement": lambda m: np.mean([a.dna["move"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
             "MeanResource": lambda m: np.mean(m.environment),
             "StructureCount": lambda m: sum(isinstance(a, Structure) for a in m.agents),
+            "AvgLifespan": lambda m: np.mean(m.dead_ages) if m.dead_ages else 0,
+            "GeneticDiversity": lambda m: np.std([[a.dna["cooperation"], a.dna["consumption"], a.dna["metabolism"], a.dna["planting"]] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0
             }
         )
 

@@ -7,9 +7,12 @@ import solara
 import mesa
 from structure import Structure
 
-print(mesa.__version__)
+print("Mesa version:", mesa.__version__)
 
+# Initialize model
+niche_model = NicheModel(n_agents=20, max_resource=2, mutation_rate=0.01, recharge_rate=0.25)
 
+# Agent appearance logic
 def agent_portrayal(agent):
     if isinstance(agent, Tile):
         x, y = agent.pos
@@ -17,8 +20,8 @@ def agent_portrayal(agent):
         norm = min(val / agent.model.max_resource, 1.0)
 
         return {
-            "color": (norm, norm, norm),
-            "size": 40  # fill cell
+            "color": (norm, norm, norm),  # grayscale for environment level
+            "size": 40 # fill cell
         }
 
     if isinstance(agent, Structure):
@@ -38,6 +41,7 @@ def agent_portrayal(agent):
 
     return None
 
+# User-configurable model parameters
 model_params = {
     "n_agents": {"type": "SliderInt", "min": 5, "max": 100, "value": 20, "label": "Initial Population"},
     "mutation_rate": {"type": "SliderFloat", "min": 0.0, "max": 0.5, "value": 0.01, "step": 0.01, "label": "Mutation Rate"},
@@ -45,8 +49,7 @@ model_params = {
     "recharge_rate": {"type": "SliderFloat", "min": 0.0, "max": 1.0, "value": 0.25, "step": 0.05, "label": "recharge rate of resource per tile"},
 }
 
-niche_model = NicheModel(n_agents=20, max_resource=2, mutation_rate=0.01, recharge_rate=0.25)
-
+# Space and plots          
 space_component = make_space_component(agent_portrayal)
 resource_plot = make_plot_component("MeanResource", backend="matplotlib")
 energy_plot = make_plot_component("MeanEnergy", backend="matplotlib")
@@ -57,11 +60,16 @@ plot_dna_4 = make_plot_component("MeanBuilder", backend="matplotlib")
 plot_dna_5 = make_plot_component("MeanMovement", backend="matplotlib")
 plot_population = make_plot_component("OrganismCount", backend="matplotlib")
 plot_structures = make_plot_component("StructureCount", backend="matplotlib")
+plot_age = make_plot_component("AvgLifespan", backend="matplotlib")          
 
+# Interactive web app
 page = SolaraViz(
     niche_model,
     components=[space_component, resource_plot, energy_plot, plot_dna_1, plot_dna_2, plot_dna_3, 
-                plot_dna_4, plot_dna_5, plot_population, plot_structures],
+                plot_dna_4, plot_dna_5, plot_population, plot_structures, plot_age],
     model_params=model_params,
-    name="Niche Construction Model"
+    name="Niche Construction Model: First Experiment, Local Environmental Modification"
 )
+
+#page
+
