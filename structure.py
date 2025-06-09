@@ -4,7 +4,7 @@ class Structure(mesa.Agent):
     '''
     This agent occupies a tile and makes sure there doesnt grow any resource in the tile
     '''
-    def __init__(self, model, lifespan = 10):
+    def __init__(self, model, lifespan = 5):
         super().__init__(model)
         self.lifespan = lifespan
     
