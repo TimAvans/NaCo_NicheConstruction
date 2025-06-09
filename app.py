@@ -12,36 +12,37 @@ print(mesa.__version__)
 
 # Agent appearance logic
 def agent_portrayal(agent):
+    # Default portrayal for unknown agents
+    portrayal = {
+        "color": (0.5, 0.5, 0.5),  # Gray color
+        "size": 5  # Small size
+    }
+
     if isinstance(agent, Tile):
         x, y = agent.pos
         val = agent.model.environment[x][y]
         norm = min(val / agent.model.max_resource, 1.0)
-
-        return {
-            "color": (norm, norm, norm),  # grayscale for environment level
-            "size": 40 # fill cell
-        }
-    
-    if isinstance(agent, OrganismA):
-        return {"color": (0.0, 0.0, 1.0), "size": 10} # RGB based on type (blue)
-
-    if isinstance(agent, OrganismB):
-        return {"color": (1.0, 0.0, 0.0), "size": 10} # RGB based on type (red)
-
-      if isinstance(agent, Structure):
-        return {
-            "color": (1, 1, 0),
+        portrayal.update({
+            "color": (norm, norm, norm),
             "size": 40  # fill cell
-        }
-
-    if isinstance(agent, Organism):
-        c = float(agent.dna.get("cooperate", 0.0))
-        scaled = min(max(c / 0.5, 0.0), 1.0)  # Maps [0.0, 0.5] → [0.0, 1.0]
-        return {
-            "color": (1 - scaled, scaled, 0.0),  # red to green
+        })
+    elif isinstance(agent, Structure):
+        portrayal.update({
+            "color": (1, 1, 0),  # Yellow
+            "size": 40  # fill cell
+        })
+    elif isinstance(agent, OrganismA):
+        portrayal.update({
+            "color": (0.0, 0.0, 1.0),  # Blue
             "size": 10
-        }
-    return None
+        })
+    elif isinstance(agent, OrganismB):
+        portrayal.update({
+            "color": (1.0, 0.0, 0.0),  # Red
+            "size": 10
+        })
+    
+    return portrayal
 
 # User-configurable model parameters
 model_params = {
@@ -51,39 +52,43 @@ model_params = {
     "recharge_rate": {"type": "SliderFloat", "min": 0.0, "max": 1.0, "value": 0.25, "step": 0.05, "label": "recharge rate of resource per tile"},
 }
 
-space_component = make_space_component(agent_portrayal) 
-plot_species_a = make_plot_component("PopulationA", backend="matplotlib")
-plot_species_b = make_plot_component("PopulationB", backend="matplotlib")
-plot_total = make_plot_component("TotalPopulation", backend="matplotlib")
-
-page = SolaraViz(
-    niche_model,
-    components=[space_component, plot_species_a, plot_species_b, plot_total],
-    model_params=model_params,
-    name="Niche Construction Model: Third Experiment, Competing Species with Distinct Niche Strategies"
-)
-
 # Initialize model
 niche_model = NicheModel(n_agents=20, max_resource=2, mutation_rate=0.01, recharge_rate=0.25)
 
 # Space and plots
 space_component = make_space_component(agent_portrayal)
-resource_plot = make_plot_component("MeanResource", backend="matplotlib")
-energy_plot = make_plot_component("MeanEnergy", backend="matplotlib")
-plot_dna_1 = make_plot_component("MeanCooperation", backend="matplotlib")
-plot_dna_2 = make_plot_component("MeanConsumption", backend="matplotlib")
-plot_dna_3 = make_plot_component("MeanReproduction", backend="matplotlib")
-# plot_dna_4 = make_plot_component("MeanBuilder", backend="matplotlib")
-plot_dna_5 = make_plot_component("MeanMovement", backend="matplotlib")
-plot_population = make_plot_component("OrganismCount", backend="matplotlib")
-plot_structures = make_plot_component("StructureCount", backend="matplotlib")
-plot_age = make_plot_component("AvgLifespan", backend="matplotlib")
+resource_plot_a = make_plot_component("MeanResourceA", backend="matplotlib")
+energy_plot_a = make_plot_component("MeanEnergyA", backend="matplotlib")
+plot_dna_1_a = make_plot_component("MeanCooperationA", backend="matplotlib")
+plot_dna_2_a = make_plot_component("MeanConsumptionA", backend="matplotlib")
+plot_dna_3_a = make_plot_component("MeanReproductionA", backend="matplotlib")
+plot_dna_4_a = make_plot_component("MeanBuilderA", backend="matplotlib")
+plot_dna_5_a = make_plot_component("MeanMovementA", backend="matplotlib")
+plot_population_a = make_plot_component("OrganismCountA", backend="matplotlib")
+plot_structures_a = make_plot_component("StructureCountA", backend="matplotlib")
+plot_age_a = make_plot_component("AvgLifespanA", backend="matplotlib")
+
+resource_plot = make_plot_component("MeanResourceB", backend="matplotlib")
+energy_plot = make_plot_component("MeanEnergyB", backend="matplotlib")
+plot_dna_1 = make_plot_component("MeanCooperationB", backend="matplotlib")
+plot_dna_2 = make_plot_component("MeanConsumptionB", backend="matplotlib")
+plot_dna_3 = make_plot_component("MeanReproductionB", backend="matplotlib")
+plot_dna_4 = make_plot_component("MeanBuilderB", backend="matplotlib")
+plot_dna_5 = make_plot_component("MeanMovementB", backend="matplotlib")
+plot_population = make_plot_component("OrganismCountB", backend="matplotlib")
+plot_structures = make_plot_component("StructureCountB", backend="matplotlib")
+plot_age = make_plot_component("AvgLifespanB", backend="matplotlib")
+
+plot_total = make_plot_component("TotalPopulation", backend="matplotlib")
+
 
 # Interactive web app
 page = SolaraViz(
     niche_model,
-    components=[space_component, resource_plot, energy_plot, plot_dna_1, plot_dna_2, plot_dna_3, 
-                plot_dna_5, plot_population, plot_structures, plot_age],
+    components=[space_component, resource_plot_a, energy_plot_a, plot_dna_1_a, plot_dna_2_a, plot_dna_3_a, 
+                plot_dna_4_a, plot_dna_5_a, plot_population_a, plot_structures_a, plot_age_a,  
+                resource_plot, energy_plot, plot_dna_1, plot_dna_2, plot_dna_3, 
+                plot_dna_4, plot_dna_5, plot_population, plot_structures, plot_age, plot_total],
     model_params=model_params,
     name="Niche Construction Model: Third Experiment, Competing Species with Distinct Niche Strategies"
 )

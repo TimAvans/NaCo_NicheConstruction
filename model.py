@@ -1,5 +1,5 @@
 import mesa
-from organism import OrganismA, OrganismB
+from organism import OrganismA, OrganismB, Organism
 import numpy as np
 from tile import Tile
 from structure import Structure
@@ -27,36 +27,32 @@ class NicheModel(mesa.Model):
 
         self.datacollector = mesa.DataCollector(
             model_reporters={
+                "OrganismCountA": lambda m: sum(isinstance(a, OrganismA) for a in m.agents),
                 "MeanEnergyA": lambda m: np.mean([a.energy for a in m.agents if isinstance(a, OrganismA)]) if any(isinstance(a, OrganismA) for a in m.agents) else 0,
-                "MeanResourceA": lambda m: np.mean(m.environment) if m.environment.size > 0 else 0,
-                "AvgCooperationA": lambda m: np.mean([a.dna["cooperation"] for a in m.agents if isinstance(a, OrganismA)]) if any(isinstance(a, OrganismA) for a in m.agents) else 0,
-                "AvgMetabolismA": lambda m: np.mean([a.dna["metabolism"] for a in m.agents if isinstance(a, OrganismA)]) if any(isinstance(a, OrganismA) for a in m.agents) else 0,
-                "AvgConsumptionA": lambda m: np.mean([a.dna["consumption"] for a in m.agents if isinstance(a, OrganismA)]) if any(isinstance(a, OrganismA) for a in m.agents) else 0,
-                "AvgPlantingA": lambda m: np.mean([a.dna["planting"] for a in m.agents if isinstance(a, OrganismA)]) if any(isinstance(a, OrganismA) for a in m.agents) else 0,
-                "PopulationA": lambda m: sum(isinstance(a, OrganismA) for a in m.agents),
+                "MeanCooperationA": lambda m: np.mean([a.dna["cooperate"] for a in m.agents if isinstance(a, OrganismA)]) if any(isinstance(a, OrganismA) for a in m.agents) else 0,
+                "MeanConsumptionA": lambda m: np.mean([a.dna["consume"] for a in m.agents if isinstance(a, OrganismA)]) if any(isinstance(a, OrganismA) for a in m.agents) else 0,
+                "MeanBuilderA": lambda m: np.mean([a.dna["build"] for a in m.agents if isinstance(a, OrganismA)]) if any(isinstance(a, OrganismA) for a in m.agents) else 0,
+                "MeanReproductionA": lambda m: np.mean([a.dna["reproduce"] for a in m.agents if isinstance(a, OrganismA)]) if any(isinstance(a, OrganismA) for a in m.agents) else 0,
+                "MeanMovementA": lambda m: np.mean([a.dna["move"] for a in m.agents if isinstance(a, OrganismA)]) if any(isinstance(a, OrganismA) for a in m.agents) else 0,
+                "MeanResourceA": lambda m: np.mean(m.environment),
+                "AvgLifespanA": lambda m: np.mean(m.dead_ages) if m.dead_ages else 0,
+                "StructureCountA": lambda m: sum(isinstance(a, Structure) for a in m.agents),
+
+                "OrganismCountB": lambda m: sum(isinstance(a, OrganismB) for a in m.agents),
                 "MeanEnergyB": lambda m: np.mean([a.energy for a in m.agents if isinstance(a, OrganismB)]) if any(isinstance(a, OrganismB) for a in m.agents) else 0,
-                "MeanResourceB": lambda m: np.mean(m.environment) if m.environment.size > 0 else 0,
-                "AvgCooperationB": lambda m: np.mean([a.dna["cooperation"] for a in m.agents if isinstance(a, OrganismB)]) if any(isinstance(a, OrganismB) for a in m.agents) else 0,
-                "AvgMetabolismB": lambda m: np.mean([a.dna["metabolism"] for a in m.agents if isinstance(a, OrganismB)]) if any(isinstance(a, OrganismB) for a in m.agents) else 0,
-                "AvgConsumptionB": lambda m: np.mean([a.dna["consumption"] for a in m.agents if isinstance(a, OrganismB)]) if any(isinstance(a, OrganismB) for a in m.agents) else 0,
-                "AvgPlantingB": lambda m: np.mean([a.dna["planting"] for a in m.agents if isinstance(a, OrganismB)]) if any(isinstance(a, OrganismB) for a in m.agents) else 0,
-                "PopulationB": lambda m: sum(isinstance(a, OrganismB) for a in m.agents),
+                "MeanCooperationB": lambda m: np.mean([a.dna["cooperate"] for a in m.agents if isinstance(a, OrganismB)]) if any(isinstance(a, OrganismB) for a in m.agents) else 0,
+                "MeanConsumptionB": lambda m: np.mean([a.dna["consume"] for a in m.agents if isinstance(a, OrganismB)]) if any(isinstance(a, OrganismB) for a in m.agents) else 0,
+                "MeanBuilderB": lambda m: np.mean([a.dna["build"] for a in m.agents if isinstance(a, OrganismB)]) if any(isinstance(a, OrganismB) for a in m.agents) else 0,
+                "MeanReproductionB": lambda m: np.mean([a.dna["reproduce"] for a in m.agents if isinstance(a, OrganismB)]) if any(isinstance(a, OrganismB) for a in m.agents) else 0,
+                "MeanMovementB": lambda m: np.mean([a.dna["move"] for a in m.agents if isinstance(a, OrganismB)]) if any(isinstance(a, OrganismB) for a in m.agents) else 0,
+                "MeanResourceB": lambda m: np.mean(m.environment),
+                "AvgLifespanB": lambda m: np.mean(m.dead_ages) if m.dead_ages else 0,
+                "StructureCountB": lambda m: sum(isinstance(a, Structure) for a in m.agents),
+
                 "TotalPopulation": lambda m: sum(isinstance(a, (OrganismA, OrganismB)) for a in m.agents)
-                # "GeneticDiversityA": lambda m: np.std(np.array([[a.dna["cooperation"], a.dna["consumption"], a.dna["metabolism"], a.dna["planting"]] 
-                #                                                 for a in m.agents if isinstance(a, OrganismA)]), axis=0).mean() if any(isinstance(a, OrganismA) for a in m.agents) else 0
-            "OrganismCount": lambda m: sum(isinstance(a, Organism) for a in m.agents),
-            "MeanEnergy": lambda m: np.mean([a.energy for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
-            "MeanCooperation": lambda m: np.mean([a.dna["cooperate"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
-            "MeanConsumption": lambda m: np.mean([a.dna["consume"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
-            # "MeanBuilder": lambda m: np.mean([a.dna["build"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
-            "MeanReproduction": lambda m: np.mean([a.dna["reproduce"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
-            "MeanMovement": lambda m: np.mean([a.dna["move"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
-            "MeanResource": lambda m: np.mean(m.environment),
-            "AvgLifespan": lambda m: np.mean(m.dead_ages) if m.dead_ages else 0,
-            "StructureCount": lambda m: sum(isinstance(a, Structure) for a in m.agents),
+
             }
         )
-
     def init_organisms(self):
         for i in range(self.n_agents):
             x = self.random.randrange(self.width)
@@ -64,9 +60,12 @@ class NicheModel(mesa.Model):
             agent_type = OrganismA if i < self.n_agents // 2 else OrganismB
             agent = agent_type(self)
             self.space.place_agent(agent, (x, y))
-            self.agents.add(agent)             
-        for _ in range(self.n_agents):
-            agent = Organism(self)
+            self.agents.add(agent)    
+
+    def init_organisms(self):
+        for i in range(self.n_agents):
+            agent_type = OrganismA if i < self.n_agents // 2 else OrganismB
+            agent = agent_type(self)
             while True:
                 x = self.random.randrange(self.width)
                 y = self.random.randrange(self.height)
@@ -83,7 +82,6 @@ class NicheModel(mesa.Model):
                     tile = Tile(self)
                     self.space.place_agent(tile, (x, y))
                     self.agents.add(tile)
-
     '''
     TODO: Make a function which mixes the agents (location wise) as to show how much local environment matters
     '''
@@ -116,4 +114,3 @@ class NicheModel(mesa.Model):
         
         self.agents.shuffle_do("step")
         self.datacollector.collect(self)
-

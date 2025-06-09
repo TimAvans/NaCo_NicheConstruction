@@ -5,23 +5,12 @@ import logging
 
 # Set up logging configuration at the beginning 
 logging.basicConfig(
-    filename='experiment1.log',
+    filename='experiment3.log',
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     filemode='w'  # 'w' to overwrite, 'a' to append
 )
 
-class OrganismBase(mesa.Agent):
-    def __init__(self, model, energy = 5, dna = None):
-        super().__init__(model)
-        self.energy = energy
-        dna_values = np.random.dirichlet([1, 1, 1, 1])  # Now 4 traits
-        self.dna = dna or {
-            "cooperation": dna_values[0],
-            "consumption": dna_values[1],
-            "metabolism": dna_values[2],
-            "planting": dna_values[3],  # NEW
-        } 
 class Organism(mesa.Agent):
     def __init__(self, model, energy = 10, struct_radius = 2, coop_radius = 2, dna = None):
         super().__init__(model)
@@ -37,6 +26,7 @@ class Organism(mesa.Agent):
         self.dna = dna or {
             "cooperate": dna_values[0],
             "consume": dna_values[1],
+            "build": dna_values[2],
             "move": dna_values[3],
             "reproduce": dna_values[4],
         }
@@ -44,6 +34,7 @@ class Organism(mesa.Agent):
         self.action_map = {
             "cooperate": self.cooperate,
             "consume": self.consume,
+            "build": self.modify_environment,
             "move": self.move,
             "reproduce": self.reproduce,
         }
@@ -52,7 +43,8 @@ class Organism(mesa.Agent):
             "move": 0.5,
             "consume": 0.2,
             "cooperate": 0.5,
-            "reproduce": 3.0,
+            "build": 2.0,
+            "reproduce": 5.0,
         }
 
         self.built = False
@@ -150,7 +142,7 @@ class Organism(mesa.Agent):
 
         for new_pos in possibilities:
             contents = self.model.space.get_cell_list_contents(new_pos)
-            if not any(isinstance(a, OrganismBase) for a in contents):
+            if not any(isinstance(a, Organism) for a in contents):
                 self.model.space.move_agent(self, new_pos)
                 return True
         return False
@@ -167,6 +159,18 @@ class Organism(mesa.Agent):
     def modify_environment(self):
         if self.pos is None:
             return False         
+        if self.energy < self.action_costs["build"]:
+            return False
+        
+        x, y = self.pos
+        contents = self.model.space.get_cell_list_contents((x, y))
+        if not any(isinstance(a, Structure) for a in contents):
+            self.energy -= self.action_costs["build"]
+            struct = Structure(self.model)
+            self.model.space.place_agent(struct, (x, y))
+            self.model.agents.add(struct)
+            self.built = True
+            print(f"Agent with id {self.unique_id} build a structure at [{x}, {y}]")
         return True
     
     def consume(self):
@@ -197,62 +201,24 @@ class Organism(mesa.Agent):
         return {k: float(v / total) for k, v in new_dna.items()} # to be safe
 
     def reproduce(self):
-        if self.energy >= 10.0:
-            self.energy /= 2
-            if self.random.random() < self.model.mutation_rate:
-                child_dna = self.mutate_dna()
-            else:
-                child_dna = dict(self.dna)
-
-            child = type(self)(self.model, energy=self.energy)
-            child.dna = child_dna
-            neighbors = self.model.space.get_neighborhood(self.pos, moore=True, include_center=False)
-            neighbors = list(neighbors)
-            self.random.shuffle(neighbors)
-            for pos in neighbors:
-                if not any(isinstance(a, OrganismBase) for a in self.model.space.get_cell_list_contents(pos)):
-                    self.model.space.place_agent(child, pos)
-                    self.model.agents.add(child)
-                    return
-
-
-class OrganismA(OrganismBase):  # Environmental Enricher
-    def __init__(self, model, energy = 5):
-        super().__init__(model, energy)
-        self.dna["consumption"] = 0.6
-        self.dna["metabolism"] = 0.2
-        self.dna["planting"] = 0.4
-
-    def modify_environment(self):
-        x, y = self.pos
-        plant_amount = self.dna["planting"] 
-        self.model.environment[x][y] += plant_amount
-        self.model.environment[x][y] = min(self.model.environment[x][y], self.model.max_resource)
-
-class OrganismB(OrganismBase):  # Aggressive Consumer
-    def __init__(self, model, energy = 5):
-        super().__init__(model, energy)
-        self.dna["consumption"] = 1.0
-        self.dna["metabolism"] = 0.4
-        self.dna["planting"] = -0.1  # Corrupts environment
-
-    def modify_environment(self):
-        x, y = self.pos
-        plant_amount = self.dna["planting"] 
-        self.model.environment[x][y] += plant_amount
-        self.model.environment[x][y] = max(self.model.environment[x][y], 0.0)
-    
-        return {k: v / total for k, v in new_dna.items()}
-
-    def reproduce(self):
         repro_cost = self.action_costs["reproduce"]
         if self.energy < repro_cost:
+            return False
+        
+        # Check for nearby structure
+        nearby = self.model.space.get_neighborhood(self.pos, moore=True, include_center=True, radius=self.struct_radius)
+        structure_found = any(
+            isinstance(a, Structure)
+            for pos in nearby
+            for a in self.model.space.get_cell_list_contents(pos)
+        )
+        if not structure_found:
+            print(f"Agent {self.unique_id} found no nearby structure to reproduce")
             return False
 
         # Find free spot first
         if self.pos is None:
             print(f"Agent {self.unique_id} has no position during reproduction — skipping.")
-            logging.warning(f"Agent {self.unique_id} has no position during reproduction — skipping.")
             return False
 
         neighbors = list(self.model.space.get_neighborhood(self.pos, moore=True, include_center=False))
@@ -262,11 +228,9 @@ class OrganismB(OrganismBase):  # Aggressive Consumer
                 # Place child only if position is available
                 if self.random.random() < self.model.mutation_rate:
                     print(f"Agent with id {self.unique_id} is reproducing and mutated its child")
-                    logging.info(f"Agent with id {self.unique_id} is reproducing and mutated its child")
                     child_dna = self.mutate_dna()
                 else:
                     print(f"Agent with id {self.unique_id} is reproducing")
-                    logging.info(f"Agent with id {self.unique_id} is reproducing")
                     child_dna = dict(self.dna)
 
                 child = Organism(self.model, dna=child_dna)
@@ -276,5 +240,24 @@ class OrganismB(OrganismBase):  # Aggressive Consumer
                 return True
 
         print(f"Agent {self.unique_id} failed to place offspring")
-        logging.info(f"Agent {self.unique_id} failed to place offspring")
         return False
+
+
+class OrganismA(Organism):  # Environmental Enricher
+    def __init__(self, model, energy = 10, struct_radius = 2, coop_radius = 2, dna = None):
+        super().__init__(model, energy)
+        self.dna["consume"] = 0.6
+        self.dna["move"] = 0.2
+        self.dna["build"] = 0.4        
+        self.dna["cooperate"] = 0.6
+        self.dna["reproduce"] = 0.4
+
+class OrganismB(Organism):  # Aggressive Consumer
+    def __init__(self, model, energy = 10, struct_radius = 2, coop_radius = 2, dna = None):
+        super().__init__(model, energy)
+        self.dna["consume"] = 1.0
+        self.dna["move"] = 0.3
+        self.dna["build"] = 0.4        
+        self.dna["cooperate"] = -0.1  # Corrupts environment
+        self.dna["reproduce"] = 0.4
+
