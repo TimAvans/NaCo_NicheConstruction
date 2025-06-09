@@ -1,6 +1,15 @@
 import mesa
 import numpy as np
 from structure import Structure
+import logging
+
+# Set up logging configuration at the beginning 
+logging.basicConfig(
+    filename='experiment3.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    filemode='w'  # 'w' to overwrite, 'a' to append
+)
 
 class Organism(mesa.Agent):
     def __init__(self, model, energy = 10, struct_radius = 2, coop_radius = 2, dna = None):
@@ -10,6 +19,7 @@ class Organism(mesa.Agent):
         self.struct_radius = struct_radius
         self.n_steps_alive = 0
         self.total_energy_gathered = 0
+        self.age = 0
         dna_values = np.random.dirichlet([1]*5)
 
         self.consume_rate = 1
@@ -46,6 +56,7 @@ class Organism(mesa.Agent):
     def step(self):
         if self.pos is None:
             print(f"Warning: Agent {self.unique_id} has no position!")
+            logging.warning(f"Agent {self.unique_id} has no position!")
             self.die()
             return
         
@@ -69,7 +80,9 @@ class Organism(mesa.Agent):
         # Select action based on normalized DNA weights
         selected_action = self.random.choices(population=actions, weights=probs)[0]
         succes = self.action_map[selected_action]()
+        self.age += 1
         print(f"Agent with id {self.unique_id} choose the following action: {selected_action} and succeeded => {succes}")
+        logging.info(f"Agent with id {self.unique_id} choose the following action: {selected_action} and succeeded => {succes}")
     
     '''
     '''
@@ -90,6 +103,7 @@ class Organism(mesa.Agent):
                 target.energy += amount
                 self.energy -= amount
                 print(f"Agent {self.unique_id} shared {amount:.2f} energy with {target.unique_id}")
+                logging.info(f"Agent {self.unique_id} shared {amount:.2f} energy with {target.unique_id}")
                 shared = True
 
         # Environmental restoration scaled by cooperation density
@@ -99,7 +113,7 @@ class Organism(mesa.Agent):
             for a in self.model.space.get_cell_list_contents(pos)
             if isinstance(a, Organism) and a.dna["cooperate"] > 0.15
         )
-
+        
         for x, y in neighborhood:
             self.model.environment[x][y] = min(
                 self.model.max_resource,
@@ -110,8 +124,10 @@ class Organism(mesa.Agent):
 
         if shared:
             print(f"Agent {self.unique_id} also repaired the environment at {self.pos} with {coop_agents_nearby} allies")
+            logging.info(f"Agent {self.unique_id} also repaired the environment at {self.pos} with {coop_agents_nearby} allies")
         else:
             print(f"Agent {self.unique_id} repaired the environment at {self.pos} but found no one to help (density = {coop_agents_nearby})")
+            logging.info(f"Agent {self.unique_id} repaired the environment at {self.pos} but found no one to help (density = {coop_agents_nearby})")
 
         return True
         
@@ -134,9 +150,13 @@ class Organism(mesa.Agent):
         return False
     
     def die(self):
-        self.model.space.remove_agent(self)
-        self.model.agents.remove(self)
-        print(f"Agent with id {self.unique_id} died due to energy level")
+        if self.pos is not None:
+            self.model.dead_ages.append(self.age)
+            self.model.space.remove_agent(self)
+        self.model.agents.discard(self)  # safer than remove
+        print(f"Agent with id {self.unique_id} died at age {self.age}")
+        logging.info(f"Agent with id {self.unique_id} died at age {self.age}")
+
 
     def modify_environment(self):
         if self.pos is None:
@@ -171,6 +191,7 @@ class Organism(mesa.Agent):
         self.energy += consumed_amount
         self.model.environment[x][y] -= consumed_amount
         print(f"Agent with id {self.unique_id} consumed {consumed_amount} at location [{x}, {y}]")
+        logging.info(f"Agent with id {self.unique_id} consumed {consumed_amount} at location [{x}, {y}]")
         self.total_energy_gathered += consumed_amount
         return True
     
@@ -179,7 +200,7 @@ class Organism(mesa.Agent):
             k: max(0.001, v + self.random.gauss(0, self.model.mutation_scale)) for k, v in self.dna.items()
         }
         total = sum(new_dna.values())
-        return {k: v / total for k, v in new_dna.items()}
+        return {k: float(v / total) for k, v in new_dna.items()} # to be safe
 
     def reproduce(self):
         repro_cost = self.action_costs["reproduce"]
@@ -222,3 +243,23 @@ class Organism(mesa.Agent):
 
         print(f"Agent {self.unique_id} failed to place offspring")
         return False
+
+
+class OrganismA(Organism):  # Environmental Enricher
+    def __init__(self, model, energy = 10, struct_radius = 2, coop_radius = 2, dna = None):
+        super().__init__(model, energy)
+        self.dna["consume"] = 0.6
+        self.dna["move"] = 0.2
+        self.dna["build"] = 0.4        
+        self.dna["cooperate"] = 0.6
+        self.dna["reproduce"] = 0.4
+
+class OrganismB(Organism):  # Aggressive Consumer
+    def __init__(self, model, energy = 10, struct_radius = 2, coop_radius = 2, dna = None):
+        super().__init__(model, energy)
+        self.dna["consume"] = 1.0
+        self.dna["move"] = 0.3
+        self.dna["build"] = 0.4        
+        self.dna["cooperate"] = -0.1  # Corrupts environment
+        self.dna["reproduce"] = 0.4
+
