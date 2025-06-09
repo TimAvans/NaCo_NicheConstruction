@@ -4,7 +4,7 @@ import os
 import uuid
 from organism import Organism
 
-RECHARGE_VALUES = [round(0.1 * i, 2) for i in range(1, 11)]  # 0.1 to 1.0
+RECHARGE_VALUES = [round(0.1 * i, 2) for i in range(11)]  # 0.1 to 1.0
 N_STEPS = 500
 RUNID = f"run_{uuid.uuid4().hex[:8]}"
 os.makedirs(RUNID, exist_ok=True)
