@@ -41,7 +41,7 @@ class Organism(mesa.Agent):
             "move": 0.5,
             "consume": 0.2,
             "cooperate": 0.5,
-            "reproduce": 3.0,
+            "reproduce": 5.0,
         }
 
         self.built = False
@@ -56,10 +56,12 @@ class Organism(mesa.Agent):
             logging.warning(f"Agent {self.unique_id} has no position!")
             self.die()
             return
+        
         #Check if organism has 0 energy if it does it dies.
         if self.energy <= 0:
             self.die()
             return
+        
         #Check if an organism can do any action if not it should die
         if all(self.energy < self.action_costs[action] for action in self.action_map):
             self.die()
