@@ -26,7 +26,6 @@ class Organism(mesa.Agent):
         self.dna = dna or {
             "cooperate": dna_values[0],
             "consume": dna_values[1],
-            "build": dna_values[2],
             "move": dna_values[3],
             "reproduce": dna_values[4],
         }
@@ -34,7 +33,6 @@ class Organism(mesa.Agent):
         self.action_map = {
             "cooperate": self.cooperate,
             "consume": self.consume,
-            "build": self.modify_environment,
             "move": self.move,
             "reproduce": self.reproduce,
         }
@@ -43,7 +41,6 @@ class Organism(mesa.Agent):
             "move": 0.5,
             "consume": 0.2,
             "cooperate": 0.5,
-            "build": 2.0,
             "reproduce": 5.0,
         }
 
@@ -156,24 +153,6 @@ class Organism(mesa.Agent):
         self.model.agents.discard(self)  # safer than remove
         print(f"Agent with id {self.unique_id} died at age {self.age}")
         logging.info(f"Agent with id {self.unique_id} died at age {self.age}")
-
-
-    def modify_environment(self):
-        if self.pos is None:
-            return False         
-        if self.energy < self.action_costs["build"]:
-            return False
-        
-        x, y = self.pos
-        contents = self.model.space.get_cell_list_contents((x, y))
-        if not any(isinstance(a, Structure) for a in contents):
-            self.energy -= self.action_costs["build"]
-            struct = Structure(self.model)
-            self.model.space.place_agent(struct, (x, y))
-            self.model.agents.add(struct)
-            self.built = True
-            print(f"Agent with id {self.unique_id} build a structure at [{x}, {y}]")
-        return True
     
     def consume(self):
         if self.pos is None:
@@ -205,17 +184,6 @@ class Organism(mesa.Agent):
     def reproduce(self):
         repro_cost = self.action_costs["reproduce"]
         if self.energy < repro_cost:
-            return False
-        
-        # Check for nearby structure
-        nearby = self.model.space.get_neighborhood(self.pos, moore=True, include_center=True, radius=self.struct_radius)
-        structure_found = any(
-            isinstance(a, Structure)
-            for pos in nearby
-            for a in self.model.space.get_cell_list_contents(pos)
-        )
-        if not structure_found:
-            print(f"Agent {self.unique_id} found no nearby structure to reproduce")
             return False
 
         # Find free spot first
@@ -254,6 +222,51 @@ class OrganismA(Organism):  # Environmental Enricher
         self.dna["cooperate"] = 0.6
         self.dna["reproduce"] = 0.4
 
+    def cooperate(self):
+        if self.pos is None:
+            return False  
+        if self.energy < self.action_costs["cooperate"]:
+            return False
+
+        neighbors = self.model.space.get_neighbors(self.pos, moore=True, include_center=False, radius=self.coop_radius)
+        low_energy_neighbors = [a for a in neighbors if isinstance(a, Organism) and a.energy < 2]
+
+        shared = False
+        if low_energy_neighbors:
+            target = self.random.choice(low_energy_neighbors)
+            amount = min(1.0, self.energy - self.action_costs["cooperate"])
+            if amount > 0:
+                target.energy += amount
+                self.energy -= amount
+                print(f"Agent {self.unique_id} shared {amount:.2f} energy with {target.unique_id}")
+                logging.info(f"Agent {self.unique_id} shared {amount:.2f} energy with {target.unique_id}")
+                shared = True
+
+        # Environmental restoration scaled by cooperation density
+        neighborhood = self.model.space.get_neighborhood(self.pos, moore=True, include_center=True, radius=self.coop_radius)
+        coop_agents_nearby = sum(
+            1 for pos in neighborhood
+            for a in self.model.space.get_cell_list_contents(pos)
+            if isinstance(a, Organism) and a.dna["cooperate"] > 0.01
+        )
+        
+        for x, y in neighborhood:
+            self.model.environment[x][y] = min(
+                self.model.max_resource,
+                self.model.environment[x][y] + self.model.recharge_rate * (1 + 0.2 * coop_agents_nearby)
+            )
+
+        self.energy -= self.action_costs["cooperate"]
+
+        if shared:
+            print(f"Agent {self.unique_id} also repaired the environment at {self.pos} with {coop_agents_nearby} allies")
+            logging.info(f"Agent {self.unique_id} also repaired the environment at {self.pos} with {coop_agents_nearby} allies")
+        else:
+            print(f"Agent {self.unique_id} repaired the environment at {self.pos} but found no one to help (density = {coop_agents_nearby})")
+            logging.info(f"Agent {self.unique_id} repaired the environment at {self.pos} but found no one to help (density = {coop_agents_nearby})")
+
+        return True    
+
 class OrganismB(Organism):  # Aggressive Consumer
     def __init__(self, model, energy = 10, struct_radius = 2, coop_radius = 2, dna = None):
         super().__init__(model, energy)
@@ -263,3 +276,30 @@ class OrganismB(Organism):  # Aggressive Consumer
         self.dna["cooperate"] = -0.1  # Corrupts environment
         self.dna["reproduce"] = 0.4
 
+    def cooperate(self):
+        if self.pos is None:
+            return False  
+        if self.energy < self.action_costs["cooperate"]:
+            return False
+
+        # Removed sharing for individualistic agent
+        # Environmental restoration scaled by cooperation density
+        neighborhood = self.model.space.get_neighborhood(self.pos, moore=True, include_center=True, radius=self.coop_radius)
+        coop_agents_nearby = sum(
+            1 for pos in neighborhood
+            for a in self.model.space.get_cell_list_contents(pos)
+            if isinstance(a, Organism) and a.dna["cooperate"] > 0.7
+        )
+        
+        for x, y in neighborhood:
+            self.model.environment[x][y] = min(
+                self.model.max_resource,
+                self.model.environment[x][y] + self.model.recharge_rate * (1 + 0.2 * coop_agents_nearby)
+            )
+
+        self.energy -= self.action_costs["cooperate"]
+
+        print(f"Agent {self.unique_id} repaired the environment at {self.pos} but found no one to help (density = {coop_agents_nearby})")
+        logging.info(f"Agent {self.unique_id} repaired the environment at {self.pos} but found no one to help (density = {coop_agents_nearby})")
+
+        return True
