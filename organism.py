@@ -20,14 +20,14 @@ class Organism(mesa.Agent):
         self.n_steps_alive = 0
         self.total_energy_gathered = 0
         self.age = 0
-        dna_values = np.random.dirichlet([1]*5)
+        dna_values = np.random.dirichlet([1]*4)
 
         self.consume_rate = 1
         self.dna = dna or {
             "cooperate": dna_values[0],
             "consume": dna_values[1],
-            "move": dna_values[3],
-            "reproduce": dna_values[4],
+            "move": dna_values[2],
+            "reproduce": dna_values[3],
         }
 
         self.action_map = {
@@ -46,10 +46,6 @@ class Organism(mesa.Agent):
 
         self.built = False
 
-    '''
-    TODO: Clearly define what each action the organism can take does (so we can state it clearly in the report)
-    TODO: Implement cooperation since now it is just an energy sink
-    '''
     def step(self):
         if self.pos is None:
             print(f"Warning: Agent {self.unique_id} has no position!")
@@ -181,47 +177,41 @@ class Organism(mesa.Agent):
         total = sum(new_dna.values())
         return {k: float(v / total) for k, v in new_dna.items()} # to be safe
 
-    def reproduce(self):
-        repro_cost = self.action_costs["reproduce"]
-        if self.energy < repro_cost:
-            return False
-
-        # Find free spot first
-        if self.pos is None:
-            print(f"Agent {self.unique_id} has no position during reproduction — skipping.")
-            return False
-
-        neighbors = list(self.model.space.get_neighborhood(self.pos, moore=True, include_center=False))
-        self.random.shuffle(neighbors)
-        for pos in neighbors:
-            if not any(isinstance(a, Organism) for a in self.model.space.get_cell_list_contents(pos)):
-                # Place child only if position is available
-                if self.random.random() < self.model.mutation_rate:
-                    print(f"Agent with id {self.unique_id} is reproducing and mutated its child")
-                    child_dna = self.mutate_dna()
-                else:
-                    print(f"Agent with id {self.unique_id} is reproducing")
-                    child_dna = dict(self.dna)
-
-                child = Organism(self.model, dna=child_dna)
-                self.model.space.place_agent(child, pos)
-                self.model.agents.add(child)
-                self.energy -= repro_cost
-                return True
-
-        print(f"Agent {self.unique_id} failed to place offspring")
-        return False
-
 
 class OrganismA(Organism):  # Environmental Enricher
     def __init__(self, model, energy = 10, struct_radius = 2, coop_radius = 2, dna = None):
         super().__init__(model, energy)
-        self.dna["consume"] = 0.6
-        self.dna["move"] = 0.2
-        self.dna["build"] = 0.4        
-        self.dna["cooperate"] = 0.6
-        self.dna["reproduce"] = 0.4
 
+    def reproduce(self):
+            repro_cost = self.action_costs["reproduce"]
+            if self.energy < repro_cost:
+                return False
+
+            if self.pos is None:
+                print(f"Agent {self.unique_id} has no position during reproduction — skipping.")
+                return False
+
+            neighbors = list(self.model.space.get_neighborhood(self.pos, moore=True, include_center=False))
+            self.random.shuffle(neighbors)
+            for pos in neighbors:
+                if not any(isinstance(a, Organism) for a in self.model.space.get_cell_list_contents(pos)):
+                    # Place child only if position is available
+                    if self.random.random() < self.model.mutation_rate:
+                        print(f"Agent with id {self.unique_id} is reproducing and mutated its child")
+                        child_dna = self.mutate_dna()
+                    else:
+                        print(f"Agent with id {self.unique_id} is reproducing")
+                        child_dna = dict(self.dna)
+
+                    child = OrganismA(self.model, dna=child_dna)
+                    self.model.space.place_agent(child, pos)
+                    self.model.agents.add(child)
+                    self.energy -= repro_cost
+                    return True
+
+            print(f"Agent {self.unique_id} failed to place offspring")
+            return False
+    
     def cooperate(self):
         if self.pos is None:
             return False  
@@ -270,36 +260,62 @@ class OrganismA(Organism):  # Environmental Enricher
 class OrganismB(Organism):  # Aggressive Consumer
     def __init__(self, model, energy = 10, struct_radius = 2, coop_radius = 2, dna = None):
         super().__init__(model, energy)
-        self.dna["consume"] = 1.0
-        self.dna["move"] = 0.3
-        self.dna["build"] = 0.4        
-        self.dna["cooperate"] = -0.1  # Corrupts environment
-        self.dna["reproduce"] = 0.4
 
+    def reproduce(self):
+            repro_cost = self.action_costs["reproduce"]
+            if self.energy < repro_cost:
+                return False
+
+            if self.pos is None:
+                print(f"Agent {self.unique_id} has no position during reproduction — skipping.")
+                return False
+
+            neighbors = list(self.model.space.get_neighborhood(self.pos, moore=True, include_center=False))
+            self.random.shuffle(neighbors)
+            for pos in neighbors:
+                if not any(isinstance(a, Organism) for a in self.model.space.get_cell_list_contents(pos)):
+                    # Place child only if position is available
+                    if self.random.random() < self.model.mutation_rate:
+                        print(f"Agent with id {self.unique_id} is reproducing and mutated its child")
+                        child_dna = self.mutate_dna()
+                    else:
+                        print(f"Agent with id {self.unique_id} is reproducing")
+                        child_dna = dict(self.dna)
+
+                    child = OrganismB(self.model, dna=child_dna)
+                    self.model.space.place_agent(child, pos)
+                    self.model.agents.add(child)
+                    self.energy -= repro_cost
+                    return True
+
+            print(f"Agent {self.unique_id} failed to place offspring")
+            return False
+    
+    #!IDK we might want to make it actually an agressive consumer instead of just doing nothing in cooperate?
     def cooperate(self):
         if self.pos is None:
             return False  
         if self.energy < self.action_costs["cooperate"]:
             return False
 
-        # Removed sharing for individualistic agent
-        # Environmental restoration scaled by cooperation density
-        neighborhood = self.model.space.get_neighborhood(self.pos, moore=True, include_center=True, radius=self.coop_radius)
-        coop_agents_nearby = sum(
-            1 for pos in neighborhood
-            for a in self.model.space.get_cell_list_contents(pos)
-            if isinstance(a, Organism) and a.dna["cooperate"] > 0.7
-        )
+        # # Removed sharing for individualistic agent
+        # # Environmental degradation scaled by cooperation density
+        # neighborhood = self.model.space.get_neighborhood(self.pos, moore=True, include_center=True, radius=self.coop_radius)
+        # coop_agents_nearby = sum(
+        #     1 for pos in neighborhood
+        #     for a in self.model.space.get_cell_list_contents(pos)
+        #     if isinstance(a, Organism) and a.dna["cooperate"] < 0.7
+        # )
         
-        for x, y in neighborhood:
-            self.model.environment[x][y] = min(
-                self.model.max_resource,
-                self.model.environment[x][y] + self.model.recharge_rate * (1 + 0.2 * coop_agents_nearby)
-            )
+        # for x, y in neighborhood:
+        #     self.model.environment[x][y] = min(
+        #         self.model.max_resource,
+        #         self.model.environment[x][y] + self.model.recharge_rate * (1 + 0.2 * coop_agents_nearby)
+        #     )
 
-        self.energy -= self.action_costs["cooperate"]
+        # self.energy -= self.action_costs["cooperate"]
 
-        print(f"Agent {self.unique_id} repaired the environment at {self.pos} but found no one to help (density = {coop_agents_nearby})")
-        logging.info(f"Agent {self.unique_id} repaired the environment at {self.pos} but found no one to help (density = {coop_agents_nearby})")
+        print(f"Agent {self.unique_id} of type OrganismB at position {self.pos} went into the cooperate function")
+        logging.info(f"Agent {self.unique_id} of type OrganismB at position {self.pos} went into the cooperate function")
 
         return True
