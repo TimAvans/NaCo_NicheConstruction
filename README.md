@@ -1,4 +1,4 @@
-# Experiment 2: Role of cooperation under resource constraints
+# Experiment 2: Role of structure building
 
 This repository contains the code and configuration for Experiment 2 in the *Niche Construction Simulation* project.
 
