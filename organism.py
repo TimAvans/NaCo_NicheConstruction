@@ -20,15 +20,7 @@ class Organism(mesa.Agent):
         self.n_steps_alive = 0
         self.total_energy_gathered = 0
         self.age = 0
-        dna_values = np.random.dirichlet([1]*4)
-
         self.consume_rate = 1
-        self.dna = dna or {
-            "cooperate": dna_values[0],
-            "consume": dna_values[1],
-            "move": dna_values[2],
-            "reproduce": dna_values[3],
-        }
 
         self.action_map = {
             "cooperate": self.cooperate,
@@ -170,17 +162,18 @@ class Organism(mesa.Agent):
         self.total_energy_gathered += consumed_amount
         return True
     
-    def mutate_dna(self):
-        new_dna = {
-            k: max(0.001, v + self.random.gauss(0, self.model.mutation_scale)) for k, v in self.dna.items()
-        }
-        total = sum(new_dna.values())
-        return {k: float(v / total) for k, v in new_dna.items()} # to be safe
+    
 
 
 class OrganismA(Organism):  # Environmental Enricher
     def __init__(self, model, energy = 10, struct_radius = 2, coop_radius = 2, dna = None):
         super().__init__(model, energy)
+        self.dna = dna or {
+            "cooperate": 0.25,
+            "consume": 0.25,
+            "move": 0.25,
+            "reproduce": 0.25,
+        }
 
     def reproduce(self):
             repro_cost = self.action_costs["reproduce"]
@@ -212,6 +205,13 @@ class OrganismA(Organism):  # Environmental Enricher
             print(f"Agent {self.unique_id} failed to place offspring")
             return False
     
+    def mutate_dna(self):
+        new_dna = {
+            k: max(0.001, v + self.random.gauss(0, self.model.mutation_scale)) for k, v in self.dna.items()
+        }
+        total = sum(new_dna.values())
+        return {k: float(v / total) for k, v in new_dna.items()} # to be safe
+  
     def cooperate(self):
         if self.pos is None:
             return False  
@@ -237,7 +237,7 @@ class OrganismA(Organism):  # Environmental Enricher
         coop_agents_nearby = sum(
             1 for pos in neighborhood
             for a in self.model.space.get_cell_list_contents(pos)
-            if isinstance(a, Organism) and a.dna["cooperate"] > 0.01
+            if isinstance(a, OrganismA) and a.dna["cooperate"] > 0.01
         )
         
         for x, y in neighborhood:
@@ -260,7 +260,12 @@ class OrganismA(Organism):  # Environmental Enricher
 class OrganismB(Organism):  # Aggressive Consumer
     def __init__(self, model, energy = 10, struct_radius = 2, coop_radius = 2, dna = None):
         super().__init__(model, energy)
-
+        self.dna = dna or {
+            "cooperate": 0.0,
+            "consume": 0.50,
+            "move": 0.25,
+            "reproduce": 0.25,
+        }
     def reproduce(self):
             repro_cost = self.action_costs["reproduce"]
             if self.energy < repro_cost:
@@ -291,13 +296,33 @@ class OrganismB(Organism):  # Aggressive Consumer
             print(f"Agent {self.unique_id} failed to place offspring")
             return False
     
+    def mutate_dna(self):
+        fixed_cooperate = self.dna["cooperate"]
+        mutable_keys = [k for k in self.dna if k != "cooperate"]
+
+        # Mutate only non-cooperate genes
+        new_dna_mutable = {
+            k: max(0.001, self.dna[k] + self.random.gauss(0, self.model.mutation_scale))
+            for k in mutable_keys
+        }
+
+        total_mutable = sum(new_dna_mutable.values())
+        scale = 1.0 - fixed_cooperate 
+
+        normalized_mutable = {
+            k: (v / total_mutable) * scale
+            for k, v in new_dna_mutable.items()
+        }
+
+        return {"cooperate": fixed_cooperate, **normalized_mutable}
+    
     #!IDK we might want to make it actually an agressive consumer instead of just doing nothing in cooperate?
     def cooperate(self):
         if self.pos is None:
             return False  
         if self.energy < self.action_costs["cooperate"]:
             return False
-
+        self.energy -= self.action_costs["cooperate"]
         # # Removed sharing for individualistic agent
         # # Environmental degradation scaled by cooperation density
         # neighborhood = self.model.space.get_neighborhood(self.pos, moore=True, include_center=True, radius=self.coop_radius)
