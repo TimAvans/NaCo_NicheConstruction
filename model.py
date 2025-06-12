@@ -22,6 +22,7 @@ class NicheModel(mesa.Model):
         self.max_resource = max_resource
         self.recharge_rate = recharge_rate
         self.environment = np.full((width, height), max_resource)  
+        self.dead_ages = []
         self.init_tiles()
         self.init_organisms()
 
@@ -31,10 +32,11 @@ class NicheModel(mesa.Model):
             "MeanEnergy": lambda m: np.mean([a.energy for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
             "MeanCooperation": lambda m: np.mean([a.dna["cooperate"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
             "MeanConsumption": lambda m: np.mean([a.dna["consume"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
-            "MeanBuilder": lambda m: np.mean([a.dna["build"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
+            # "MeanBuilder": lambda m: np.mean([a.dna["build"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
             "MeanReproduction": lambda m: np.mean([a.dna["reproduce"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
             "MeanMovement": lambda m: np.mean([a.dna["move"] for a in m.agents if isinstance(a, Organism)]) if any(isinstance(a, Organism) for a in m.agents) else 0,
             "MeanResource": lambda m: np.mean(m.environment),
+            "AvgLifespan": lambda m: np.mean(m.dead_ages) if m.dead_ages else 0,
             "StructureCount": lambda m: sum(isinstance(a, Structure) for a in m.agents),
             "Cooperators": lambda m: sum(1 for a in m.agents if isinstance(a, Organism) and a.dna["cooperate"] >= 0.15),
             "NonCooperators": lambda m: sum(1 for a in m.agents if isinstance(a, Organism) and a.dna["cooperate"] < 0.15),            
