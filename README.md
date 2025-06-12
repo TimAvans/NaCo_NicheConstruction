@@ -1,4 +1,3 @@
-```markdown
 # Niche Construction Simulation in Evolutionary Algorithms
 
 ![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue)
