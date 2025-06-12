@@ -11,7 +11,7 @@ os.makedirs(RUNID, exist_ok=True)
 
 for rate in RECHARGE_VALUES:
     print(f"Running simulation with recharge_rate={rate}")
-    model = NicheModel(n_agents=20, max_resource=2, mutation_rate=0.01, recharge_rate=rate)
+    model = NicheModel(n_agents=20, max_resource=2, mutation_rate=0.5, recharge_rate=rate)
     organism_settings = None
     for agent in model.agents:
         if isinstance(agent, Organism):
