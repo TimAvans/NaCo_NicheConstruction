@@ -3,10 +3,10 @@
 ![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue)
 
 This repository accompanies the report *"Simulating Niche Construction and Environmental Feedback"*. It implements an agent-based model to study how organisms shape their evolutionary trajectories by modifying environments, using the [Mesa](https://mesa.readthedocs.io/) framework.
-A sample run of batch_sim.py is available in the folder run_sample, to see how the UI version works, after installation of dependencies run   
+A sample run of batch_sim.py is available in the folder run_sample, to see how the UI version works, after following the setup run.
 ```bash
    solara run app.py 
-   ```.
+```
 
 **Key Features**:
 - 🧬 Agents with evolvable DNA (consumption, cooperation, metabolism).
