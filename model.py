@@ -9,7 +9,7 @@ from structure import Structure
 
 '''
 class NicheModel(mesa.Model):    
-    def __init__(self, n_agents = 5, width = 25, height = 25, max_resource = 5.0, recharge_rate = 0.25, mutation_rate= 0.05, mutation_scale = 0.02, ):
+    def __init__(self, n_agents = 5, width = 25, height = 25, max_resource = 5.0, recharge_rate = 0.25, mutation_rate= 0.05, mutation_scale = 0.02):
         super().__init__()
         self.step_count = 0
         self.grid = mesa.space.MultiGrid(width, height, torus=True)
