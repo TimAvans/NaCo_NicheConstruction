@@ -1,0 +1,18 @@
+Simulation Parameters:
+Recharge rate: 0.20
+Mutation rate: 0.01
+Mutation scale: 0.02
+Max resource: 2
+Initial population: 20
+
+Organism Parameters:
+Initial energy: 10
+Cooperation radius: 2
+Structure radius: 2
+Consume rate: 1
+Action costs:
+  move: 0.5
+  consume: 0.2
+  cooperate: 0.5
+  build: 2.0
+  reproduce: 5.0
