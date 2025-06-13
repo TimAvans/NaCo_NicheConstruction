@@ -56,7 +56,7 @@ The model implements:
    - Local environmental modification through cooperative restoration
 
 2. **Evolutionary Mechanisms**:
-   - Reproduction with 5% mutation rate (Gaussian noise)
+   - Reproduction with a mutation rate (Gaussian noise)
    - Trait normalization ensuring behavioral consistency
 
 3. **Data Collection** (`model.py`):
