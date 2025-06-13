@@ -46,10 +46,6 @@ class Organism(mesa.Agent):
 
         self.built = False
 
-    '''
-    TODO: Clearly define what each action the organism can take does (so we can state it clearly in the report)
-    TODO: Implement cooperation since now it is just an energy sink
-    '''
     def step(self):
         if self.pos is None:
             print(f"Warning: Agent {self.unique_id} has no position!")
